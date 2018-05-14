@@ -1,6 +1,11 @@
 from __future__ import absolute_import, print_function
+import os
+
 import numpy as np
 import pyopencl as cl
+
+modulepath=os.path.dirname(os.path.abspath(__file__))
+
 
 class Particles(object):
     def __init__(self,nparticles=1,ndim=10):
@@ -48,16 +53,26 @@ elements=Elements()
 
 
 class CLTrack(object):
-    def __init__(self,device="0.0",particles,elements):
+    ro=cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR
+    rw=cl.mem_flags.READ_WRITE | cl.mem_flags.COPY_HOST_PTR
+    def __init__(self,particles,elements,device="0.0"):
+        self.particles=particles
+        self.elements=elements
+        os.environ['PYOPENCL_COMPILER_OUTPUT']='1'
+        srcpath='-I%s'%modulepath
         self.ctx = cl.create_some_context(answers=device)
         self.queue = cl.CommandQueue(ctx)
-        ro=cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR
-        rw=cl.mem_flags.READWRITE | cl.mem_flags.COPY_HOST_PTR
-        self.particles_g = cl.Buffer(ctx, rw, hostbuf=a_np)
-        self.elements_g = cl.Buffer(ctx, ro, hostbuf=a_np)
-
-
-
-
-
-
+        self.particles_g = cl.Buffer(ctx, self.rw, hostbuf=particles.data)
+        self.elements_g = cl.Buffer(ctx, self.ro, hostbuf=elements.data)
+        src=open(os.path.join(modulepath,'sixtracklib_cl.c')).read()
+        self.prg=cl.Program(ctx,src).build(options=[srcpath])
+    def track(self,nturns,elemids):
+        elemids=np.array(self.elemids,dtype='uint64')
+        elemids_g=cl.Buffer(self.ctx, self.rw, hostbuf=elemids)
+        nelems=np.int64(len(elem_ids))
+        nturns=np.int64(nturns)
+        self.prg.elements_track(queue,[npart],None,
+                                self.elements_g, elemids_g, nelems,
+                                nturns,
+                                self.particles_g)
+        cl.enqueue_copy(queue,particles.data,self.particles_g)
