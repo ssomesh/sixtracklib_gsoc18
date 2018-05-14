@@ -12,7 +12,7 @@ def track(particles, elements, element_list, nturns, turnbyturn, elementbyelemen
         for element_id in element_list:
             element=elements[element_id]
             track_function=track[typeid(element)]
-            for ii in range(len(nparticles)):
+            for ii in range(len(particles)):
                 if not_lost(particle[ii]):
                      particle[ii]=track_function(particle[ii],element)
             if elementbyelement:
@@ -40,14 +40,16 @@ Discussion:
 
 More general loop
 ```python
-for tt in range(nturns):
-    for element_id in elements:
-        element=elements[elemid]
-        track_function=track[typeid(elem)]
-        track_function(particles, elements, elemid)
+def track(particles, elements, element_list, nturns, turnbyturn, elementbyelement):
+    for tt in range(nturns):
+        for element_id in elements:
+            element=elements[elemid]
+            track_function=track[typeid(elem)]
+            track_function(particles, elements, elemid)
+    return particles, turnbyturn, elementbyelement
 ```
 
 Discussion:
-- this time `track_function` may have side effects. Each `not_lost` and `track_function` can have side effects
+- this time `track_function` may have side effects. Each track_function needs to be an individual kernel or a synchronization step is needed after each call.
 
 
