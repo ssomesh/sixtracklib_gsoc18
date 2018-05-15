@@ -11,6 +11,11 @@ elements.add_drift(3.3)
 elements.add_multipole([0,-0.01])
 
 
+sim=sl.SixTrackCL(particles,elements)
+
+
+
+
 
 
 
