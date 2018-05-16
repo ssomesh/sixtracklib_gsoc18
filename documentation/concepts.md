@@ -51,22 +51,26 @@ def track(particles, elements, element_list, nturns, turnbyturn, elementbyelemen
 
 - elements might be modified by the particles
 - new particles might be generated
-- this time `track_function` may have side effects. Each track_function needs to be an individual kernel or a barrier is needed after each call.
+- this time `track_function` may have side effects. 
+- The implementation can be
+  1. the loop is in a CPU and track_function launch a kernel
+  2. the loop is in a GPU, but needs Opencl >2.0 or cuda
 
 ## Tracking function signatures
 
-Signatures under consideration:
+Signatures under considerations:
 
 1. explicit arguments by value
 ```c
-int  track_multipole(Particles, double length, ..., __global double* bal){
+// in track.h
+int  track_multipole(__global Particle *p, double length, ..., __global double* bal){
     ///
-    p->x+=length*p->px*p->rpp;
+    p->px+=bal[0];
     ///
 }
 
-///
-   track_multipole(Particle *p,
+// in block.c
+   track_multipole(__global Particle *p,
                 mutlipole_length(elements,elemid),
                 ...,
                 multipole_bal(elements,elemid))
@@ -79,14 +83,16 @@ int  track_multipole(Particles, double length, ..., __global double* bal){
    - (-) no nested structures
 2. pointer to slot and accessors functions
 ```c
+// in track.h
 int track_multipole(Particle *p, __global value_t *elements, size_t elemid ){
     double length=mutlipole_length(data,elemid);
     double *bal = mutlipole_bal(data,elemid);
     ///
-    p->x+=length*p->px*p->rpp;
+    p->px+=bal[0];
     ///
 }
-///
+
+// in block.c
    track_multipole(Particle *p,
                 mutlipole_length(elements,elemid),
                 ...,
@@ -96,28 +102,32 @@ int track_multipole(Particle *p, __global value_t *elements, size_t elemid ){
 ```
    - (-) need accessors to be defined to use tracking functions therefore larger API
    - (+) support nested structures
-   - (-) no additional memory
+   - (+) no additional memory and no pointer resolutions
 3. structures
 ```c
+/// in track.h
 typedef struct {
     double length;
     ///
     double *bal;
-};
+} Multipoles;
   
 
 int track_multipole(Particle *p, __global *Multipole el){
 ...
-double length=el->length;
-*double bal=length->el->bal;
+p->x+=length*p->px*p->rpp;
+*double bal=el->bal;
 ...
 };
-///
+/// in block.c
 track_multipole(p, Multipole_build(elements,elemid);
-///
+/// or ///
+track_multipole(p, (_global Multipole *) elements[elemid] );
+       
 
 
 ```
    - (+) idiomatic
-   -  (-) need storage for allocating structures unless empty slots are allocated for pointers and compilers factor out structures
+   - (-) need a way to resolve pointers, data cannot be in constant memory
+   - (-) alignment has to be enforced e.g. 32bit pointers should be in 64bit slots
 
