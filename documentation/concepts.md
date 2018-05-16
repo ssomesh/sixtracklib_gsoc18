@@ -59,26 +59,64 @@ Signatures under consideration:
 
 1. explicit arguments by value
 ```c
-track_multipole(Particles, double length, ..., __global double* bal)
+int  track_multipole(Particles, double length, ..., __global double* bal){
+    ///
+    p->x+=length*p->px*p->rpp;
+    ///
+}
+
+///
+   track_multipole(Particle *p,
+                mutlipole_length(elements,elemid),
+                ...,
+                multipole_bal(elements,elemid))
+///
+
+
 ```
    - (-) order of arguments matters
    - (+) compact function body
    - (-) no nested structures
 2. pointer to slot and accessors functions
 ```c
-track_multiple(Particles, __global value_t *elements, size_t elemid )
-length=mutlipole_length(data,elemid);
+int track_multipole(Particle *p, __global value_t *elements, size_t elemid ){
+    double length=mutlipole_length(data,elemid);
+    double *bal = mutlipole_bal(data,elemid);
+    ///
+    p->x+=length*p->px*p->rpp;
+    ///
+}
+///
+   track_multipole(Particle *p,
+                mutlipole_length(elements,elemid),
+                ...,
+                multipole_bal(elements,elemid))
+///
+...
 ```
-   - (-) need accessor to be defined, larger API
+   - (-) need accessors to be defined to use tracking functions therefore larger API
    - (+) support nested structures
    - (-) no additional memory
 3. structures
 ```c
-track_multipole(Particles, __global *Multipole el){
+typedef struct {
+    double length;
+    ///
+    double *bal;
+};
+  
+
+int track_multipole(Particle *p, __global *Multipole el){
 ...
 double length=el->length;
 *double bal=length->el->bal;
 ...
+};
+///
+track_multipole(p, Multipole_build(elements,elemid);
+///
+
+
 ```
    - (+) idiomatic
    -  (-) need storage for allocating structures unless empty slots are allocated for pointers and compilers factor out structures
