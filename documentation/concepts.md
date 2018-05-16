@@ -2,7 +2,7 @@
 
 ## Main loop
 
-### static loop
+### Static loop case
 
 The main loop maybe described with the following code
 
@@ -33,7 +33,7 @@ def track(particles, elements, element_list, nturns, turnbyturn, elementbyelemen
 - `elements` may be stored in constant memory.
 - Each particle maybe stored in the private memory during tracking and copied from/to globabl memory at the beginning/end of the tracking.
 
-### dynamic loop:
+### Dynamic loop case:
 
 ```python
 def track(particles, elements, element_list, nturns, turnbyturn, elementbyelement):
@@ -43,9 +43,41 @@ def track(particles, elements, element_list, nturns, turnbyturn, elementbyelemen
             track_function=track[typeid(elem)]
             track_function(particles, elements, elemid)
     return particles, elements, turnbyturn, elementbyelement
+```
 
 - elements might be modified by the particles
 - new particles might be generated
 - this time `track_function` may have side effects. Each track_function needs to be an individual kernel or a synchronization step is needed after each call.
 
+## Tracking function signatures
+
+- explicit arguments by value
+```
+track_multiple(Particles, double length, ..., __global double* bal)
+```
+* (-) order of arguments matters
+* (+) compat function body
+* (-) no nested structures
+
+- pointer to slot and accessor functions
+```
+track_multipole(Particles, __global value_t* data, size_t elemid){
+...
+length=mutlipole_length(data,elemid);
+```
+* (-) need accessor to be defined, larger API
+* (+) support nested structures
+* (-) no additional memory
+
+
+- structures
+```
+track_multipole(Particles, __global *Multipole){
+...
+double length=Multiple->lenght;
+*double length=Multiple->lenght;
+
+```
+* (+) idiomatic
+* (-) need storage for allocating structures unless empty slots are allocated for pointers and compilers remove the structures
 
