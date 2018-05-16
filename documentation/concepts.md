@@ -1,6 +1,10 @@
 # SixTrackLib Concepts
 
+[TOC]
+
 ## Main loop
+
+Particles are tracked in main loop. There two type of loops, one supposedly faster for "static" simulations and another for more "dynamic"  simulations
 
 ### Static loop case
 
@@ -23,13 +27,13 @@ def track(particles, elements, element_list, nturns, turnbyturn, elementbyelemen
     return particles, turnbyturn, elementbyelement
 ```
 
-- `particle[ii]` contains an array of coordinates for the particle `ii` that get updated in place as long as the particle is not lost
-- `track[ ]` contains a set of tracking functions loosely representing a particular section of the accelerator (more specifically is a type of the integration step).
-- `element` contains the type and the parameters for the tracking function of the element `jj`
-- `elements` containts a set of elements that could be used
-- the loop runs for a predefined sequence of elements
+- `particle[ii]` contains an array of coordinates for the particle `ii` that get updated in place as long as the particle is not lost;
+- `track[typeid(element)]` contains a tracking function of a given type;
+- `element` contains the type and the parameters for the tracking function of the element `jj`;
+- `elements` contains a set of elements that could be used;
+- the loop runs for a predefined sequence of elements;
 - `track_function` has no side effect
-- The entire loop can be coded in a single GPU kernel. The advantage is no overhead for kernel launch. The disavvantage is the register pressure which is dominated by  the most complicated `track_function`.
+- The entire loop can be coded in a single GPU kernel. The advantage is no overhead for kernel launch. The disadvantage is the register pressure which is dominated by  the most complicated `track_function`.
 - `elements` may be stored in constant memory.
 - Each particle maybe stored in the private memory during tracking and copied from/to globabl memory at the beginning/end of the tracking.
 
@@ -47,37 +51,35 @@ def track(particles, elements, element_list, nturns, turnbyturn, elementbyelemen
 
 - elements might be modified by the particles
 - new particles might be generated
-- this time `track_function` may have side effects. Each track_function needs to be an individual kernel or a synchronization step is needed after each call.
+- this time `track_function` may have side effects. Each track_function needs to be an individual kernel or a barrier is needed after each call.
 
 ## Tracking function signatures
 
-- explicit arguments by value
-```
-track_multiple(Particles, double length, ..., __global double* bal)
-```
-* (-) order of arguments matters
-* (+) compat function body
-* (-) no nested structures
+Signatures under consideration:
 
-- pointer to slot and accessor functions
+1. explicit arguments by value
+```c
+track_multipole(Particles, double length, ..., __global double* bal)
 ```
-track_multipole(Particles, __global value_t* data, size_t elemid){
-...
+   - (-) order of arguments matters
+   - (+) compact function body
+   - (-) no nested structures
+2. pointer to slot and accessors functions
+```c
+track_multiple(Particles, __global value_t *elements, size_t elemid )
 length=mutlipole_length(data,elemid);
 ```
-* (-) need accessor to be defined, larger API
-* (+) support nested structures
-* (-) no additional memory
-
-
-- structures
-```
-track_multipole(Particles, __global *Multipole){
+   - (-) need accessor to be defined, larger API
+   - (+) support nested structures
+   - (-) no additional memory
+3. structures
+```c
+track_multipole(Particles, __global *Multipole el){
 ...
-double length=Multiple->lenght;
-*double length=Multiple->lenght;
-
+double length=el->length;
+*double bal=length->el->bal;
+...
 ```
-* (+) idiomatic
-* (-) need storage for allocating structures unless empty slots are allocated for pointers and compilers remove the structures
+   - (+) idiomatic
+   -  (-) need storage for allocating structures unless empty slots are allocated for pointers and compilers factor out structures
 
