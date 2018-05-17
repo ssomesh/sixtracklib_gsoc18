@@ -46,7 +46,7 @@ def track(particles, elements, element_list, nturns, turnbyturn, elementbyelemen
             element=elements[elemid]
             track_function=track[typeid(elem)]
             track_function(particles, elements, elemid)
-    return particles, elements, turnbyturn, elementbyelement
+    return particles, elements,turnbyturn, elementbyelement
 ```
 
 - elements might be modified by the particles
@@ -93,10 +93,7 @@ int track_multipole(Particle *p, __global value_t *elements, size_t elemid ){
 }
 
 // in block.c
-   track_multipole(Particle *p,
-                mutlipole_length(elements,elemid),
-                ...,
-                multipole_bal(elements,elemid))
+   track_multipole(Particle *p,  elements,  elemid )
 ///
 ...
 ```
@@ -107,9 +104,9 @@ int track_multipole(Particle *p, __global value_t *elements, size_t elemid ){
 ```c
 /// in track.h
 typedef struct {
-    double length;
+    double length ;
     ///
-    double *bal;
+    double * bal  __attribute__(((aligned(8)));
 } Multipoles;
   
 
@@ -122,7 +119,7 @@ p->x+=length*p->px*p->rpp;
 /// in block.c
 track_multipole(p, Multipole_build(elements,elemid);
 /// or ///
-track_multipole(p, (_global Multipole *) elements[elemid] );
+track_multipole(p, (_global Multipole *) &elements[elemid] );
        
 
 
