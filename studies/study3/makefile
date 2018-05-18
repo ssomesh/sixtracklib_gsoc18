@@ -1,10 +1,11 @@
-all: vectorisable_example vectorisable_example_vect makefile
-	./vectorisable_example
-	./vectorisable_example_vect
+all: ex1 ex1_vect makefile
+	./ex1
+	./ex1_vect
 
 
-vectorisable_example: vectorisable_example.cpp makefile
+ex1: ex1.cpp makefile
 	g++ $< -o $@ -O2
 
-vectorisable_example_vect: vectorisable_example.cpp makefile
-	g++ $< -o $@ -O2 -ftree-vectorize -march=native -fopt-info-all=$@.info
+ex1_vect: ex1.cpp makefile
+	#g++ $< -o $@ -O2 -ftree-vectorize -march=native -fopt-info-all=$@.info
+	g++ $< -o $@ -O2 -ftree-vectorize -march=native -fopt-info
