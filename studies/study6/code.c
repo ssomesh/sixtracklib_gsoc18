@@ -29,14 +29,19 @@ __kernel void add_vec(
 
 __kernel void mul_vec(
        ulong n,
+       ulong r,
        __global const double *a,
        __global const double *b,
        __global double *c
        )
 {
     size_t i = get_global_id(0);
+    double cc=0;
     if (i < n) {
-       c[i] = a[i] * b[i];
+       for (int jj=0; jj<r; jj++){
+           cc*= a[i] * b[i];
+       };
+       c[i]=cc;
     }
 };
 

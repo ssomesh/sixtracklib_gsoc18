@@ -47,7 +47,7 @@ class Kernel(object):
 ctx=CLManager(0,0).compile("code.c")
 
 import time
-def test(N,R):
+def test(N,R,name='add_vec'):
    N=ctx.u64(N)
    R=ctx.u64(R)
    a=ctx.buffer(np.random.rand(N),'ro')
@@ -55,19 +55,39 @@ def test(N,R):
    c=ctx.buffer(np.zeros(N),'rw')
    start=time.time()
    ctx.host_to_dev(c)
-   ctx.add_vec([N],N,R,a,b,c)
+   kern=getattr(ctx,name)
+   kern([N],N,R,a,b,c)
    ctx.dev_to_host(c)
    err=(a.hostbuf+b.hostbuf-c.hostbuf/R).std()
    return time.time()-start
 
-out=[]
-for n in [1,2048,2**20]:
-    for r in [1,10**6]:
-        res=test(n,r)
-        print(f"{n} {r} {res}")
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as pl
+
+def mkplot(test,name):
+     out=[]
+     nn=[1,2**11,2**14,2**16,2**19,2**20]
+     rr=10**np.arange(0,6)
+     for n in nn:
+         for r in rr:
+             res=test(n,r,name)
+             print(f"{n:>10} {r:>10} {res:8.5f}")
+             out.append((n,r,res))
+
+     nn,rr,tt=np.array(out).reshape((len(nn),len(rr),3)).T
+
+     pl.clf()
+     for ni in range(tt.shape[1]):
+         pl.loglog(rr[:,ni],tt[:,ni],label=f"size: {int(nn[0,ni]):d}")
+
+     pl.xlabel('inner loops')
+     pl.ylabel('time')
+     pl.legend()
+     pl.title(f'{ctx.device.name} - {name}')
+     pl.ylim(1e-4,10)
+     pl.savefig(f'{name}.png')
 
 
-
-
-
-
+mkplot(test,'add_vec')
+mkplot(test,'mul_vec')
