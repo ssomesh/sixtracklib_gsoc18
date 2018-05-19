@@ -8,7 +8,6 @@ float* a = new float[ArraySize];
 float* b = new float[ArraySize];
 float* c = new float[ArraySize];
 
-
 float startTime = (float)clock()/CLOCKS_PER_SEC;
 
 for (unsigned int j = 0; j< 200 ; j++) // some repetitions
@@ -16,8 +15,8 @@ for (unsigned int j = 0; j< 200 ; j++) // some repetitions
       c[i] = a[i] * b[i];
 
 
-float endTime = (float)clock()/CLOCKS_PER_SEC;
+float endTime = (float)clock()/CLOCKS_PER_SEC -startTime;
 
-printf("%g \n",endTime);
+printf("%g \n", endTime);
 }
 

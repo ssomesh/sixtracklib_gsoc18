@@ -96,7 +96,7 @@ class BeamBeam4D(Object):
     objid = u64(value=obj_ids.BeamBeam4D)
     q_part = f64()
     N_part = f64()
-    sigma_x = f64()
+    sigma_x = Field(BeamBeam6D,size='nslice')
     sigma_y = f64()
     beta_s  = f64()
     min_sigma_diff = f64()
