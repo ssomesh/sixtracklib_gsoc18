@@ -5,3 +5,4 @@ study3: autovectorization example
 study4: unit test for track.h
 study5: example for using cffi with python
 study6: simple pyopencl example
+study7: example differential algebra
