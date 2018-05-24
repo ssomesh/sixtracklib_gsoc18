@@ -59,7 +59,7 @@ def test(N,R,name='add_vec'):
    kern([N],N,R,a,b,c)
    ctx.dev_to_host(c)
    err=(a.hostbuf+b.hostbuf-c.hostbuf/R).std()
-   return time.time()-start
+   return time.time()-start,err
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -71,7 +71,7 @@ def mkplot(test,name):
      rr=10**np.arange(0,6)
      for n in nn:
          for r in rr:
-             res=test(n,r,name)
+             res=test(n,r,name)[0]
              print(f"{n:>10} {r:>10} {res:8.5f}")
              out.append((n,r,res))
 
