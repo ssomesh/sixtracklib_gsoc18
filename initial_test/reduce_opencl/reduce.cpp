@@ -23,6 +23,8 @@ static const char source[] =
 "{\n"
 "    size_t gid = get_global_id(0);\n"
 "    size_t tid = get_local_id(0);\n"
+"    if(gid > n-1)\n"
+"       return;\n"
 "  // do reduction in global mem\n"
 "  for (unsigned int s = get_local_size(0) / 2; s > 0; s >>= 1)\n"
 "  {\n"
@@ -65,7 +67,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 
   cl::Kernel reduce(program, "reduce");
   //size_t N = 1 << 20;
-  size_t N = 1 << 16;
+  size_t N = 1 << 16; 
 
   // Prepare input data.
   std::vector<double> b(N, 0);
@@ -104,7 +106,8 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   queue.enqueueNDRangeKernel(
       reduce, 
       cl::NullRange, // an offset to compute the global id 
-      cl::NDRange(N), // the number of work-items (threads) spawned along each direction; can be 1D,2D,3D.. i.e. NDRange(x,y,z); 
+      cl::NDRange(N + blockSize), // the number of work-items (threads) spawned along each direction; can be 1D,2D,3D.. i.e. NDRange(x,y,z); 
+      // since we can't specify the number of work_groups directly, lauch blockSize number of threads more than N, such that we have more numbe rof threads than required. Further, filter out the threads whose id is greater than N.
       cl::NDRange(blockSize) // the number of work items (threads) per group
      // cl::NullRange;// If you pass NULL (or cl::NullRange) to the last parameter (the # of threads per block), the OpenCL implementation will try to break down the threads into an optimal (for some optimisation strategy) value.      
       );
@@ -142,9 +145,9 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   queue.enqueueNDRangeKernel(
       reduce, 
       cl::NullRange, // an offset to compute the global id 
-      cl::NDRange(numBlocks), // the number of work-items (threads) spawned along each direction; can be 1D,2D,3D.. i.e. NDRange(x,y,z); 
-     // cl::NDRange(blockSize) // the number of work items (threads) per group
-      cl::NullRange// If you pass NULL (or cl::NullRange) to the last parameter (the # of threads per block), the OpenCL implementation will try to break down the threads into an optimal (for some optimisation strategy) value.      
+      cl::NDRange(numBlocks + blockSize), // the number of work-items (threads) spawned along each direction; can be 1D,2D,3D.. i.e. NDRange(x,y,z); 
+      cl::NDRange(blockSize) // the number of work items (threads) per group
+      //cl::NullRange// If you pass NULL (or cl::NullRange) to the last parameter (the # of threads per block), the OpenCL implementation will try to break down the threads into an optimal (for some optimisation strategy) value.      
       );
 
   // Get result back to host; block until complete
