@@ -1,4 +1,5 @@
-// This code finds the work-group wise sum of the vector
+// This code finds the sum of the elements of a vector 
+//FIXME: The code works when work_group_size is a multiple of total number of threads launched
 
 #include <iostream>
 #include <vector>
