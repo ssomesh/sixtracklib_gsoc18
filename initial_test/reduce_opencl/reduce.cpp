@@ -69,7 +69,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 
   // Prepare input data.
   std::vector<double> b(N, 0);
-  const size_t blockSize = 256; // # of threads per work-group (set by default)
+  const size_t blockSize = 128; // # of threads per work-group (set by default is 256)
   size_t numBlocks = (N+blockSize-1)/blockSize; // the ceil of N/blockSize
 
   std::vector<double> c(numBlocks);
@@ -103,9 +103,10 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   // Launch kernel on the compute device.
   queue.enqueueNDRangeKernel(
       reduce, 
-      cl::NullRange, 
-      cl::NDRange(N),
-      cl::NullRange
+      cl::NullRange, // an offset to compute the global id 
+      cl::NDRange(N), // the number of work-items (threads) spawned along each direction; can be 1D,2D,3D.. i.e. NDRange(x,y,z); 
+      cl::NDRange(blockSize) // the number of work items (threads) per group
+     // cl::NullRange;// If you pass NULL (or cl::NullRange) to the last parameter (the # of threads per block), the OpenCL implementation will try to break down the threads into an optimal (for some optimisation strategy) value.      
       );
 
   // Get result back to host; block until complete
