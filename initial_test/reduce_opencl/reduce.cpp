@@ -13,7 +13,7 @@ static const char source[] =
 "#elif defined(cl_amd_fp64)\n"
 "#  pragma OPENCL EXTENSION cl_amd_fp64: enable\n"
 "#else\n"
-"#  error double precision is not supported\n"
+"# error double precision is not supported\n"
 "#endif\n"
 "kernel void reduce(\n"
 "       ulong n,\n"
@@ -65,11 +65,11 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 
   cl::Kernel reduce(program, "reduce");
   //size_t N = 1 << 20;
-  size_t N = 512;
+  size_t N = 1 << 16;
 
   // Prepare input data.
   std::vector<double> b(N, 0);
-  const size_t blockSize = 128; // # of threads per work-group (set by default is 256)
+  const size_t blockSize = 256; // # of threads per work-group (set by default is 256)
   size_t numBlocks = (N+blockSize-1)/blockSize; // the ceil of N/blockSize
 
   std::vector<double> c(numBlocks);
@@ -92,13 +92,13 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   reduce.setArg(2, C);
 
   //print B
-  std::cout << "Print B\n";
-  for(int i=0; i<N;++i)
-  {
-    std::cout << b[i] ;
-    std::cout << (((i%8) != 7) ? "\t" : "\n"); // printing 8 numbers on a line
-  }
-  std::cout << std::endl;
+//  std::cout << "Print B\n";
+//  for(int i=0; i<N;++i)
+//  {
+//    std::cout << b[i] ;
+//    std::cout << (((i%8) != 7) ? "\t" : "\n"); // printing 8 numbers on a line
+//  }
+//  std::cout << std::endl;
 
   // Launch kernel on the compute device.
   queue.enqueueNDRangeKernel(
@@ -114,18 +114,49 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 
 
 
-  std::cout << "Print C\n";
-  // print C
-  for(int i=0; i<numBlocks;++i) // i < #of work-groups; each entry corresponds to a work-group
-    std::cout << c[i] << "\n";
-// NOTE: C contains the block-wise sum of the input vector
-  // TODO:Launch  the reduce kernel a second time to add the elements of the vector C
+//  std::cout << "Print C\n";
+//  // print C
+//  for(int i=0; i<numBlocks;++i) // i < #of work-groups; each entry corresponds to a work-group
+//    std::cout << c[i] << "\n";
+
+// NOTE: c contains the block-wise sum of the input vector
+// out[0] contains the final sum
+// The size of the problem and the number of threads per work-group have been carefully set to make sure that out[0] contains the final answer.
+// i.e. the size of the intermediate array, c, is equal to the size of the work-group with which the next launch to the 'reduce' kernel is made.
+
+  std::vector<double> out(1); // a vector of size 1, since it will contain only the final answer
+
+  // Allocate device buffers and transfer input data to device.
+  cl::Buffer TMP(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+      c.size() * sizeof(double), c.data()); // input vector
+
+  cl::Buffer OUT(context, CL_MEM_READ_WRITE,
+      out.size() * sizeof(double)); // output vector
+
+  // Set kernel parameters.
+  reduce.setArg(0, static_cast<cl_ulong>(N));
+  reduce.setArg(1, TMP);
+  reduce.setArg(2, OUT);
+
+  // Launch kernel on the compute device.
+  queue.enqueueNDRangeKernel(
+      reduce, 
+      cl::NullRange, // an offset to compute the global id 
+      cl::NDRange(numBlocks), // the number of work-items (threads) spawned along each direction; can be 1D,2D,3D.. i.e. NDRange(x,y,z); 
+     // cl::NDRange(blockSize) // the number of work items (threads) per group
+      cl::NullRange// If you pass NULL (or cl::NullRange) to the last parameter (the # of threads per block), the OpenCL implementation will try to break down the threads into an optimal (for some optimisation strategy) value.      
+      );
+
+  // Get result back to host; block until complete
+  queue.enqueueReadBuffer(OUT, CL_TRUE, 0, out.size() * sizeof(double), out.data());
+  
+  std::cout <<  "Sum = " << out[0] << std::endl;
 
 };
 
 int main(int argc, char *argv[]) {
   //const size_t N = 1 << 20;
-  const size_t N = 512; 
+  const size_t N = 1 << 16; 
 
   try {
     // Get list of OpenCL platforms.
