@@ -65,7 +65,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
       << "OpenCL compilation error" << std::endl
       << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[ndev])
       << std::endl;
-    return 1;
+    throw;
   }
 
   cl::Kernel reduce(program, "reduce");
