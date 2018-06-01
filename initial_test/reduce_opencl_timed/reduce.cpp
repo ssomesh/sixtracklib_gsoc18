@@ -1,5 +1,6 @@
 // This code finds the sum of the elements of a vector 
-//FIXME: The reduce kernel expects the blockSize to be a "power of 2" to work correctly. Modify the code so that it works for any blockSize
+//NOTE: The reduce kernel expects the blockSize to be a "power of 2" to work correctly. Modify the code so that it works for any blockSize
+// Profiling the code 
 
 #include <iostream>
 #include <vector>
@@ -63,7 +64,8 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   //std::cout << "Using " << devices[ndev].getInfo<CL_DEVICE_NAME>() << std::endl;
 
   // Create command queue.
-  cl::CommandQueue queue(context, devices[ndev]);
+  cl::CommandQueue queue(context, devices[ndev],CL_QUEUE_PROFILING_ENABLE);
+// the third parameer is to enable profiling
 
   // Compile OpenCL program for found devices.
   cl::Program program(context, cl::Program::Sources(
@@ -120,15 +122,38 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 //  }
 //  std::cout << std::endl;
 
+  cl::Event event;
   // Launch kernel on the compute device.
-  queue.enqueueNDRangeKernel(
+  cl_int success =  queue.enqueueNDRangeKernel(
+  //queue.enqueueTask( 
       reduce, 
       cl::NullRange, // an offset to compute the global id 
       cl::NDRange(N_sz), // the number of work-items (threads) spawned along each direction; can be 1D,2D,3D.. i.e. NDRange(x,y,z); 
       // since we can't specify the number of work_groups directly, launch number of threads more than N -- N_sz elements to be precise
-      cl::NDRange(blockSize) // the number of work items (threads) per group
+      cl::NDRange(blockSize), // the number of work items (threads) per group
      // cl::NullRange;// If you pass NULL (or cl::NullRange) to the last parameter (the # of threads per block), the OpenCL implementation will try to break down the threads into an optimal (for some optimisation strategy) value.      
+      nullptr,
+      &event
       );
+  assert( success == CL_SUCCESS );
+  queue.flush();
+  event.wait();
+  cl_ulong when_queued = 0;
+  cl_ulong when_submitted = 0;
+  cl_ulong when_started = 0;
+  cl_ulong when_ended = 0;
+
+  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_QUEUED, &when_queued );
+  assert( success == CL_SUCCESS );
+  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_SUBMIT, &when_submitted );
+  assert( success == CL_SUCCESS );
+  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_START, &when_started );
+  assert( success == CL_SUCCESS );
+  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_END, &when_ended );
+  assert( success == CL_SUCCESS );
+
+  double elapsed = when_started-when_ended;
+  std::cout << "kernel ran for " << elapsed << " ns" << std::endl;
 
   // Get result back to host; block until complete
   queue.enqueueReadBuffer(C, CL_TRUE, 0, c.size() * sizeof(double), c.data());
@@ -225,7 +250,8 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Device list" << std::endl;
     for(int jj=0; jj<devices.size(); jj++){
-      std::cout << jj<<":"<<devices[jj].getInfo<CL_DEVICE_NAME>() << std::endl;
+      std::cout << "Name of devicei " << jj<<" : "<<devices[jj].getInfo<CL_DEVICE_NAME>() << std::endl;
+      std::cout << "resolution of device timer for device " << jj <<" : "<<devices[jj].getInfo<CL_DEVICE_PROFILING_TIMER_RESOLUTION>() << std::endl;
       mk_test(devices,jj,context);
     };
     return 0;
