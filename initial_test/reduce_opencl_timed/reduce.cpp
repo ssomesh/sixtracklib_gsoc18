@@ -152,7 +152,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_END, &when_ended );
   assert( success == CL_SUCCESS );
 
-  double elapsed = when_started-when_ended;
+  double elapsed = when_ended-when_started;
   std::cout << "kernel ran for " << elapsed << " ns" << std::endl;
 
   // Get result back to host; block until complete
