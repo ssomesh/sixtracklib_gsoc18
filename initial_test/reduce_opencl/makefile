@@ -1,5 +1,5 @@
 reduce: reduce.cpp
-	g++ -std=c++0x -o reduce reduce.cpp -lOpenCL -I/usr/local/cuda-8.0/include/ -L/usr/lib64/nvidia/
+	g++ -std=c++11 -o reduce reduce.cpp -lOpenCL -I/usr/local/cuda-8.0/include/ -L/usr/lib64/nvidia/
 	./reduce
 
 clean:
