@@ -82,14 +82,14 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 
   cl::Kernel reduce(program, "reduce");
   //size_t N = 1 << 20;
-  size_t N = 52; 
-
+  size_t N = 3225; 
+  std::cout << "N = " << N << std::endl;
   // Prepare input data.
-  const size_t blockSize = 128; // # of threads per work-group (set by default is 256)
+  const size_t blockSize = 512; // # of threads per work-group (set by default is 256)
   assert((blockSize & (blockSize-1)) == 0); // ensure blockSize is a power of 2 
   size_t numBlocks = (N+blockSize-1)/blockSize; // the ceil of N/blockSize
   size_t N_sz = numBlocks * blockSize; // The multiple of blockSize greater than N and closest to N
-  std::cout << "N_sz = " << N_sz << std::endl;
+  //std::cout << "N_sz = " << N_sz << std::endl;
   std::vector<double> b(N_sz, 0); 
 
   std::vector<double> c(numBlocks);
@@ -112,13 +112,13 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   reduce.setArg(2, C);
 
   //print B
-  std::cout << "Print B\n";
-  for(int i=0; i<N_sz;++i)
-  {
-    std::cout << b[i] ;
-    std::cout << (((i%blockSize) != (blockSize-1)) ? "\t" : "\n"); // printing 8 numbers on a line
-  }
-  std::cout << std::endl;
+//  std::cout << "Print B\n";
+//  for(int i=0; i<N_sz;++i)
+//  {
+//    std::cout << b[i] ;
+//    std::cout << (((i%blockSize) != (blockSize-1)) ? "\t" : "\n"); // printing 8 numbers on a line
+//  }
+//  std::cout << std::endl;
 
   // Launch kernel on the compute device.
   queue.enqueueNDRangeKernel(
@@ -135,10 +135,10 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 
 
 
-  std::cout << "Print C\n";
-  // print C
-  for(int i=0; i<numBlocks;++i) // i < #of work-groups; each entry corresponds to a work-group
-    std::cout << c[i] << "\n";
+//  std::cout << "Print C\n";
+//  // print C
+//  for(int i=0; i<numBlocks;++i) // i < #of work-groups; each entry corresponds to a work-group
+//    std::cout << c[i] << "\n";
 
 // NOTE: c contains the block-wise sum of the input vector
 // out[0] contains the final sum
@@ -147,7 +147,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 
 #if 1
   const int blockSizeNew = nextPowerOf2(numBlocks);//the nearest power of 2 greater than numBlocks
-  std::cout << "blockSizeNew = " << blockSizeNew << std::endl;
+ // std::cout << "blockSizeNew = " << blockSizeNew << std::endl;
 
   std::vector<double> out(1); // a vector of size 1, since it will contain only the final answer
 
