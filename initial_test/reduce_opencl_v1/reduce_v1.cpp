@@ -112,7 +112,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   reduce.setArg(0, static_cast<cl_ulong>(N));
   reduce.setArg(1, B);
   reduce.setArg(2, C);
-//  reduce.setArg(3, local(sizeof(double)*blockSize));
+//  reduce.setArg(3, cl::Local(sizeof(double)*blockSize));
 
   //print B
 //  std::cout << "Print B\n";
@@ -171,7 +171,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   reduce.setArg(0, static_cast<cl_ulong>(N));
   reduce.setArg(1, TMP);
   reduce.setArg(2, OUT);
-//  reduce.setArg(3, local(sizeof(double)*blockSizeNew));
+//  reduce.setArg(3, cl::Local(sizeof(double)*blockSizeNew));
   
 
   // Launch kernel on the compute device.
