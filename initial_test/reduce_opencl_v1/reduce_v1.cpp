@@ -1,6 +1,6 @@
 // This code finds the sum of the elements of a vector 
-//NOTE: The reduce kernel expects the blockSize to be a "power of 2" to work correctly. Modify the code so that it works for any blockSize
-// Profiling the code 
+// local memory is used
+//FIXME: The reduce kernel expects the blockSize to be a "power of 2" to work correctly. Modify the code so that it works for any blockSize
 
 #include <iostream>
 #include <vector>
@@ -26,28 +26,29 @@ static const char source[] =
 "{\n"
 "    size_t gid = get_global_id(0);\n"
 "    size_t tid = get_local_id(0);\n"
-//"    if(gid >= n)\n"
-//"{\n"
-//"       return;\n"
-//"}\n"
-"  // do reduction in global mem\n"
+"    // Declare local memory\n"
+"   __local double shm[1024];\n" // declaring local memory of the largest size possible. It is an overkill, I feel
+"   // Read data to local memory\n"
+"   shm[tid]  = b[gid];\n"   
+"   barrier(CLK_LOCAL_MEM_FENCE);\n // ensure entire block is loaded to local memory" 
+"  // do reduction in local mem\n"
 "  for (unsigned int s = get_local_size(0) / 2; s > 0; s >>= 1)\n"
 "  {\n"
 "    if (tid < s)\n"
 "  {\n"
-"      b[gid] += b[gid + s];\n"
+"      shm[tid] += shm[tid + s];\n"
 "    }\n"
 "   barrier(CLK_LOCAL_MEM_FENCE);// make sure all adds at one stage are done!\n"
 "    }\n"
 
 "  // only thread 0 writes result for this work-group back to global mem\n"
+
 "  if (tid == 0)\n"
 "  {\n"
-"    c[get_group_id(0)] = b[gid];\n"
+"    c[get_group_id(0)] = shm[0];\n"
 "  }\n"
 
 "}\n";
-
 int nextPowerOf2(int n)
 {
     n--;
@@ -64,8 +65,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   //std::cout << "Using " << devices[ndev].getInfo<CL_DEVICE_NAME>() << std::endl;
 
   // Create command queue.
-  cl::CommandQueue queue(context, devices[ndev],CL_QUEUE_PROFILING_ENABLE);
-// the third parameer is to enable profiling
+  cl::CommandQueue queue(context, devices[ndev]);
 
   // Compile OpenCL program for found devices.
   cl::Program program(context, cl::Program::Sources(
@@ -112,6 +112,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   reduce.setArg(0, static_cast<cl_ulong>(N));
   reduce.setArg(1, B);
   reduce.setArg(2, C);
+//  reduce.setArg(3, cl::Local(sizeof(double)*blockSize));
 
   //print B
 //  std::cout << "Print B\n";
@@ -122,38 +123,15 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 //  }
 //  std::cout << std::endl;
 
-  cl::Event event;
   // Launch kernel on the compute device.
-  cl_int success =  queue.enqueueNDRangeKernel(
-  //queue.enqueueTask( 
+  queue.enqueueNDRangeKernel(
       reduce, 
       cl::NullRange, // an offset to compute the global id 
       cl::NDRange(N_sz), // the number of work-items (threads) spawned along each direction; can be 1D,2D,3D.. i.e. NDRange(x,y,z); 
       // since we can't specify the number of work_groups directly, launch number of threads more than N -- N_sz elements to be precise
-      cl::NDRange(blockSize), // the number of work items (threads) per group
+      cl::NDRange(blockSize) // the number of work items (threads) per group
      // cl::NullRange;// If you pass NULL (or cl::NullRange) to the last parameter (the # of threads per block), the OpenCL implementation will try to break down the threads into an optimal (for some optimisation strategy) value.      
-      nullptr,
-      &event
       );
-  assert( success == CL_SUCCESS );
-  queue.flush();
-  event.wait();
-  cl_ulong when_queued = 0;
-  cl_ulong when_submitted = 0;
-  cl_ulong when_started = 0;
-  cl_ulong when_ended = 0;
-
-  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_QUEUED, &when_queued );
-  assert( success == CL_SUCCESS );
-  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_SUBMIT, &when_submitted );
-  assert( success == CL_SUCCESS );
-  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_START, &when_started );
-  assert( success == CL_SUCCESS );
-  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_END, &when_ended );
-  assert( success == CL_SUCCESS );
-
-  double elapsed = when_ended-when_started;
-  std::cout << "kernel ran for " << elapsed << " ns" << std::endl;
 
   // Get result back to host; block until complete
   queue.enqueueReadBuffer(C, CL_TRUE, 0, c.size() * sizeof(double), c.data());
@@ -193,10 +171,12 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   reduce.setArg(0, static_cast<cl_ulong>(N));
   reduce.setArg(1, TMP);
   reduce.setArg(2, OUT);
+//  reduce.setArg(3, cl::Local(sizeof(double)*blockSizeNew));
   
 
   // Launch kernel on the compute device.
-  // @assert( number of blocks is 1; i.e. the blockSize for this kernel launch is >= numBlocks since we want the barrier to be there and get the final answer
+  // @assert( number of blocks is 1; i.e. the blockSize for this kernel launch is >= numBlocks) since we want the barrier to be there and get the final answer 
+  // @assert(blockSizeNew <= max size of local memory on the device for the kernel launch configuration) 
   queue.enqueueNDRangeKernel(
       reduce, 
       cl::NullRange, // an offset to compute the global id 
@@ -250,8 +230,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Device list" << std::endl;
     for(int jj=0; jj<devices.size(); jj++){
-      std::cout << "Name of devicei " << jj<<" : "<<devices[jj].getInfo<CL_DEVICE_NAME>() << std::endl;
-      std::cout << "resolution of device timer for device " << jj <<" : "<<devices[jj].getInfo<CL_DEVICE_PROFILING_TIMER_RESOLUTION>() << std::endl;
+      std::cout << jj<<":"<<devices[jj].getInfo<CL_DEVICE_NAME>() << std::endl;
       mk_test(devices,jj,context);
     };
     return 0;
