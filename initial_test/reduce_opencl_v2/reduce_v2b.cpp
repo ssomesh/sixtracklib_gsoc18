@@ -44,7 +44,7 @@ static const char source[] =
 
 "}\n";
 
-int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
+int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, size_t N) {
   //std::cout << "Using " << devices[ndev].getInfo<CL_DEVICE_NAME>() << std::endl;
 
   // Create command queue.
@@ -68,7 +68,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 
   cl::Kernel reduce(program, "reduce");
   //size_t N = 1 << 20;
-  size_t N = 3225; 
+  //size_t N = 3225; // N accepted as a command line argument
   std::cout << "N = " << N << std::endl;
 #if 0
   // Prepare input data.
@@ -106,7 +106,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
   std::vector<double> c(numBlocks, 0.0);
 
   for (int jj=0; jj<N; jj++){
-    b[jj]=2.0*jj;
+    b[jj]=1.0;//2.0*jj;
   };
   // The index [N,N_sz-1] are padded with zeros; in general it can be padded with the identity element for that operator 
 
@@ -188,6 +188,12 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context) {
 
 int main(int argc, char *argv[]) {
 
+  if(argc != 2) {
+      std::cerr << "Usage: " << argv[0] << " <size of the input>" << std::endl;
+      exit(1);
+    }
+  size_t N = atoi(argv[1]); // getting the size of the input
+
   try {
     // Get list of OpenCL platforms.
     std::vector<cl::Platform> platform;
@@ -226,7 +232,7 @@ int main(int argc, char *argv[]) {
     for(int jj=0; jj<devices.size(); jj++){
       std::cout << "Name of devicei " << jj<<" : "<<devices[jj].getInfo<CL_DEVICE_NAME>() << std::endl;
       std::cout << "resolution of device timer for device " << jj <<" : "<<devices[jj].getInfo<CL_DEVICE_PROFILING_TIMER_RESOLUTION>() << std::endl;
-      mk_test(devices,jj,context);
+      mk_test(devices,jj,context,N);
     };
     return 0;
 
