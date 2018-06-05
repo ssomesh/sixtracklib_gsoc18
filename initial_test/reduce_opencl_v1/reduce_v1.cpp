@@ -1,5 +1,5 @@
 // This code finds the sum of the elements of a vector 
-// local memory is used
+// local memory is used -- declared inside the kernel
 //FIXME: The reduce kernel expects the blockSize to be a "power of 2" to work correctly. Modify the code so that it works for any blockSize
 
 #include <iostream>
