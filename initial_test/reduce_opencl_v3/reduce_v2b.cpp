@@ -2,10 +2,12 @@
 //NOTE: The reduce kernel expects the blockSize to be a "power of 2" to work correctly. Modify the code so that it works for any blockSize
 // Profiling the code 
 
+#include <algorithm>
+#include <cassert>
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <string>
-#include <assert.h>
 
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
@@ -44,160 +46,166 @@ static const char source[] =
 
 "}\n";
 
-int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, size_t N) {
-  //std::cout << "Using " << devices[ndev].getInfo<CL_DEVICE_NAME>() << std::endl;
+int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, 
+            std::size_t const N ) 
+{
+    //std::cout << "Using " << devices[ndev].getInfo<CL_DEVICE_NAME>() << std::endl;
 
-  // Create command queue.
-  cl::CommandQueue queue(context, devices[ndev],CL_QUEUE_PROFILING_ENABLE);
-  // the third parameer is to enable profiling
+    // Create command queue.
+    cl::CommandQueue queue(context, devices[ndev],CL_QUEUE_PROFILING_ENABLE);
+    // the third parameer is to enable profiling
 
-  // Compile OpenCL program for found devices.
-  cl::Program program(context, cl::Program::Sources(
+    // Compile OpenCL program for found devices.
+    cl::Program program(context, cl::Program::Sources(
         1, std::make_pair(source, strlen(source))
         ));
 
-  try {
+    try {
     program.build(devices);
-  } catch (const cl::Error&) {
+    } catch (const cl::Error&) {
     std::cerr
       << "OpenCL compilation error" << std::endl
       << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[ndev])
       << std::endl;
     throw;
-  }
+    }
 
-  cl::Kernel reduce(program, "reduce");
-  //size_t N = 1 << 20;
-  //size_t N = 3225; // N accepted as a command line argument
-  std::cout << "N = " << N << std::endl;
-#if 0
-  // Prepare input data.
-  const size_t blockSize = 1024; // # of threads per work-group (set by default is 256)
-#endif  
-  /* ----------------------------------------------------------------------- */
-  /* ---- Find the "optimal" work-group size:
-   * ---- In this first iteration, we try to use the largest number of 
-   * ---- threads per work-group available;
-   * ----------------------------------------------------------------------- */
-#if 1 
-  // determine the work-group size
-  size_t blockSize = 
+    cl::Kernel reduce(program, "reduce");
+    //size_t N = 1 << 20;
+    //size_t N = 3225; // N accepted as a command line argument
+    std::cout << "N = " << N << std::endl;
+    #if 0
+    // Prepare input data.
+    const size_t blockSize = 1024; // # of threads per work-group (set by default is 256)
+    #endif  
+    /* ----------------------------------------------------------------------- */
+    /* ---- Find the "optimal" work-group size:
+    * ---- In this first iteration, we try to use the largest number of 
+    * ---- threads per work-group available;
+    * ----------------------------------------------------------------------- */
+    #if 1 
+    // determine the work-group size
+    size_t blockSize = 
     reduce.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( devices[ndev]); 
 
-  /* Any OpenCL Device has a number of computing units. At best, 
-   * blockSize * work_group_size number of threads are active at a time; */
+    /* Any OpenCL Device has a number of computing units. At best, 
+    * blockSize * work_group_size number of threads are active at a time; */
 
-  size_t const maxNumOfComputeUnits = 
+    size_t const maxNumOfComputeUnits = 
     devices[ndev].getInfo< CL_DEVICE_MAX_COMPUTE_UNITS >();
 
-  /* For the given kernel + device, a work-group size in multiples of 
-   * this number is preferred */
+    /* For the given kernel + device, a work-group size in multiples of 
+    * this number is preferred */
 
-  size_t const preferredWorkGroupFactor = 
+    size_t const preferredWorkGroupFactor = 
     reduce.getWorkGroupInfo< CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>( 
         devices[ ndev ] );
-#endif
-  assert((blockSize & (blockSize-1)) == 0); // ensure blockSize is a power of 2
-  size_t numBlocks = (N+blockSize-1)/blockSize; // the ceil of N/blockSize
-  size_t N_sz = numBlocks * blockSize; // The multiple of blockSize greater than N and closest to N
-  //std::cout << "N_sz = " << N_sz << std::endl;
-  std::vector<double> b(N_sz, 0); 
-  std::vector<double> c(numBlocks);
+    #endif
+    assert((blockSize & (blockSize-1)) == 0); // ensure blockSize is a power of 2
+    size_t numBlocks = (N+blockSize-1)/blockSize; // the ceil of N/blockSize
+    size_t N_sz = numBlocks * blockSize; // The multiple of blockSize greater than N and closest to N
+    //std::cout << "N_sz = " << N_sz << std::endl;
+    std::vector<double> b(N_sz, 0); 
+    std::vector<double> c(numBlocks);
 
-//  std::vector<double> c(numBlocks, 0.0);
+    //  std::vector<double> c(numBlocks, 0.0);
 
-  for (int jj=0; jj<N; jj++){
-    b[jj]=1.0;//2.0*jj;
-  };
-  // The index [N,N_sz-1] are padded with zeros; in general it can be padded with the identity element for that operator 
+    double average_time = 0.0;
+    double num_of_turns = 0.0;
 
-  // Allocate device buffers and transfer input data to device.
-  cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-      b.size() * sizeof(double), b.data()); // input vector
+    std::size_t const NUM_REPETITIONS = 1010;
 
-  cl::Buffer C(context, CL_MEM_READ_WRITE,
-      c.size() * sizeof(double)); // output vector
+    assert( N_sz == b.size() );
+    assert( numBlocks == c.size() );
 
-  double average_time = 0.0f;
-  for(int i=0; i<1010;++i) {
+    std::size_t const NUM_BYTES_B = sizeof( double ) * N_sz;
+    std::size_t const NUM_BYTES_C = sizeof( double ) * numBlocks;
 
-  for(int j=0; j<numBlocks; ++j)
-    c[j] = 0;
+    // Allocate device buffers and transfer input data to device.
+    cl::Buffer B(context, CL_MEM_READ_WRITE, b.size() * sizeof(double)); // input vector
+    cl::Buffer C(context, CL_MEM_READ_WRITE, c.size() * sizeof(double)); // output vector
 
-  queue.enqueueReadBuffer( C, CL_TRUE, 0, sizeof( double) * c.size(), &c[ 0 ] );
-  // Set kernel parameters.
-  reduce.setArg(0, static_cast<cl_ulong>(N));
-  reduce.setArg(1, B);
-  reduce.setArg(2, C);
+    reduce.setArg(0, static_cast<cl_ulong>(N));
+    reduce.setArg(1, B);
+    reduce.setArg(2, C);
 
-  //print B
-  //  std::cout << "Print B\n";
-  //  for(int i=0; i<N_sz;++i)
-  //  {
-  //    std::cout << b[i] ;
-  //    std::cout << (((i%blockSize) != (blockSize-1)) ? "\t" : "\n"); // printing 8 numbers on a line
-  //  }
-  //  std::cout << std::endl;
+    for( std::size_t ll = 0 ; ll < NUM_REPETITIONS ; ++ll )
+    {
+        auto b_end_of_data = b.begin();
+        std::advance( b_end_of_data, N );
 
-  cl::Event event;
-  // Launch kernel on the compute device.
-  cl_int success =  queue.enqueueNDRangeKernel(
-      reduce, 
-      cl::NullRange, // an offset to compute the global id 
-      cl::NDRange(N_sz), // the number of work-items (threads) spawned along each direction; can be 1D,2D,3D.. i.e. NDRange(x,y,z); 
-      // since we can't specify the number of work_groups directly, launch number of threads more than N -- N_sz elements to be precise
-      cl::NDRange(blockSize), // the number of work items (threads) per group
-      // cl::NullRange;// If you pass NULL (or cl::NullRange) to the last parameter (the # of threads per block), the OpenCL implementation will try to break down the threads into an optimal (for some optimisation strategy) value.      
-      nullptr,
-      &event
-      );
-  assert( success == CL_SUCCESS );
-  queue.finish(); // a barrier. CPU thread should wait
-  queue.flush();
-  event.wait(); 
-  cl_ulong when_queued = 0;
-  cl_ulong when_submitted = 0;
-  cl_ulong when_started = 0;
-  cl_ulong when_ended = 0;
+        std::fill( b.begin(), b_end_of_data, static_cast< double >( ll ) );
+        std::fill( b_end_of_data, b.end(), 0.0 );
+        std::fill( c.begin(), c.end(), 0.0 );
 
-  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_QUEUED, &when_queued );
-  assert( success == CL_SUCCESS );
-  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_SUBMIT, &when_submitted );
-  assert( success == CL_SUCCESS );
-  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_START, &when_started );
-  assert( success == CL_SUCCESS );
-  success = event.getProfilingInfo< cl_ulong >( CL_PROFILING_COMMAND_END, &when_ended );
-  assert( success == CL_SUCCESS );
+        cl::Event event;
 
-  double elapsed = when_ended-when_started;
-  if(i > 10) // ignoring the first 10 measurements of time
-    average_time += elapsed/1000.0;
-  }
-  std::cout << "kernel ran for " << average_time << " ns" << std::endl;
-//  std::cout << "kernel ran for " << elapsed << " ns" << std::endl;
+        cl_int ret = CL_SUCCESS;
 
-  // Get result back to host; block until complete
-  queue.enqueueReadBuffer(C, CL_TRUE, 0, c.size() * sizeof(double), c.data());
+        ret  = queue.enqueueWriteBuffer( C, CL_TRUE, 0, NUM_BYTES_C, c.data() );
+        ret |= queue.enqueueWriteBuffer( B, CL_TRUE, 0, NUM_BYTES_B, b.data() );      
 
-  double sum_reduce = 0.0;
+        ret |= queue.enqueueNDRangeKernel( 
+              reduce, cl::NullRange, cl::NDRange( N_sz ), 
+              cl::NDRange( blockSize ), nullptr, &event );
 
-  for( auto const& partial_sum : c ) // finding the block-wise sum on the host
-  {
-    sum_reduce += partial_sum;
-  }
+        queue.flush();
 
-  std::cout << "Print sum_reduce: \n" << sum_reduce << std::endl;
+        assert( ret == CL_SUCCESS );
+        event.wait();
 
+        cl_ulong when_kernel_queued    = 0;
+        cl_ulong when_kernel_submitted = 0;
+        cl_ulong when_kernel_started   = 0;
+        cl_ulong when_kernel_ended    = 0;
 
-  //  std::cout << "Print C\n";
-  //  // print C
-  //  for(int i=0; i<numBlocks;++i) // i < #of work-groups; each entry corresponds to a work-group
-  //    std::cout << c[i] << "\n";
+        ret  = event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_QUEUED, &when_kernel_queued );
 
-  // NOTE: c contains the block-wise sum of the input vector
-  // sum_reduce contains the final sum
+        ret |= event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_SUBMIT, &when_kernel_submitted );
 
-};
+        ret |= event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_START, &when_kernel_started );
+
+        ret |= event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_END, &when_kernel_ended );
+
+        assert( ret == CL_SUCCESS );
+
+        ret  = queue.enqueueReadBuffer( C, CL_TRUE, 0, NUM_BYTES_C, c.data() );
+        /* enqueueReadBuffer() is an implicit queue.flush() */
+
+        assert( ret == CL_SUCCESS );
+
+        double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
+
+        if( ll > 10u )
+        {
+            average_time += kernel_time_elapsed;
+            num_of_turns += 1.0;
+        }
+
+        double sum_reduce = 0.0;
+
+        for( auto const& partial_sum : c ) // finding the block-wise sum on the host
+        {
+            sum_reduce += partial_sum;
+        }
+
+        std::cout << "ll = " << std::setw( 5 ) << ll 
+                  << " :: sum_reduce = " << sum_reduce << std::endl;
+    }
+    
+    if( num_of_turns > 1.0 )
+    {
+        average_time /= num_of_turns;
+    }
+    
+    std::cout << "average time taken = " << average_time << std::endl;
+    
+    return 0;
+}
 
 int main(int argc, char *argv[]) {
 
