@@ -15,7 +15,7 @@ ans_with_local_memory=`tail -1 temp1.txt`
 ans_with_global_memory=`tail -1 temp2.txt`
 #echo $ans_with_global_memory
 
-if [ ! $ans_with_global_memory -eq $ans_with_local_memory ]; then
+if [ ! "$ans_with_global_memory" = "$ans_with_local_memory" ]; then
   echo "Alert! Answers do not match."
   exit
 fi
