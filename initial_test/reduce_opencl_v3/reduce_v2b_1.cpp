@@ -134,9 +134,9 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context,
         auto b_end_of_data = b.begin();
         std::advance( b_end_of_data, N );
 
-        std::fill( b.begin(), b_end_of_data, static_cast< double >( ll ) ); // populating the first N elements of  b with 'll' in each iteration
-        std::fill( b_end_of_data, b.end(), 0.0 ); // filling the remainder of the array, 'b' with 0.
-        std::fill( c.begin(), c.end(), 0.0 ); // filling c with 0
+        std::fill( b.begin(), b_end_of_data, static_cast< double >( ll ) );
+        std::fill( b_end_of_data, b.end(), 0.0 );
+        std::fill( c.begin(), c.end(), 0.0 );
 
         cl::Event event;
 
@@ -182,8 +182,8 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context,
 
         if( ll > 10u )
         {
-            average_time += kernel_time_elapsed; // may result in an overflow. So we need to find the running average
             num_of_turns += 1.0;
+            average_time += (kernel_time_elapsed-average_time)/num_of_turns; // finding the running average
         }
 
         double sum_reduce = 0.0;
@@ -193,14 +193,14 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context,
             sum_reduce += partial_sum;
         }
 
-        std::cout << "ll = " << std::setw( 5 ) << ll 
-                  << " :: sum_reduce = " << sum_reduce << std::endl;
+//        std::cout << "ll = " << std::setw( 5 ) << ll 
+//                  << " :: sum_reduce = " << sum_reduce << std::endl;
     }
     
-    if( num_of_turns > 1.0 )
-    {
-        average_time /= num_of_turns;
-    }
+//    if( num_of_turns > 1.0 )
+//    {
+//        average_time /= num_of_turns;
+//    }
     
     std::cout << "average time taken = " << average_time << std::endl;
     
