@@ -157,7 +157,7 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context,
         cl_ulong when_kernel_queued    = 0;
         cl_ulong when_kernel_submitted = 0;
         cl_ulong when_kernel_started   = 0;
-        cl_ulong when_kernel_ended    = 0;
+        cl_ulong when_kernel_ended     = 0;
 
         ret  = event.getProfilingInfo< cl_ulong >( 
           CL_PROFILING_COMMAND_QUEUED, &when_kernel_queued );

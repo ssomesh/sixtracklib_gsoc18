@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <vector>
 #include <string>
+#include <sys/time.h>
 
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
@@ -47,6 +48,19 @@ static const char source[] =
 "       c[get_group_id(0)] = shm[0];\n"
 "     }\n"
 "}\n";
+
+
+double rtclock()
+{
+  struct timezone Tzp;
+  struct timeval Tp;
+  uint64_t stat;
+  stat = gettimeofday (&Tp, &Tzp);
+  if (stat != 0) printf("Error return from gettimeofday: %d",stat);
+  return(Tp.tv_sec + Tp.tv_usec*1.0e-6);
+}
+
+
 
 int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, size_t N) {
   //std::cout << "Using " << devices[ndev].getInfo<CL_DEVICE_NAME>() << std::endl;
@@ -147,11 +161,23 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
     std::size_t const NUM_BYTES_C = sizeof( double ) * numBlocks;
 
   // Allocate device buffers and transfer input data to device.
+        double clkbegin, clkend;
+        double t;
+        clkbegin = rtclock();
   cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
       b.size() * sizeof(double), b.data()); // input vector
+    //    queue.finish();
+        clkend = rtclock();
+        t = clkend-clkbegin;
+        std::cout << "time for data transfer of b = " << t*1.0e+9 << "ns" << std::endl;
 
+        clkbegin = rtclock();
   cl::Buffer C(context, CL_MEM_READ_WRITE,
       c.size() * sizeof(double) ); // output vector
+     //   queue.finish();
+        clkend = rtclock();
+        t = clkend-clkbegin;
+        std::cout << "time for data transfer of c = " << t*1.0e+9 << "ns" << std::endl;
 
   // Set kernel parameters.
   reduce.setArg(0, static_cast<cl_ulong>(N));
@@ -161,9 +187,12 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
 
   
     double average_time = 0.0;
+    double average_queue_time = 0.0;
+    double average_submission_time = 0.0;
     double num_of_turns = 0.0;
+    double average_time_cpu = 0.0;
 
-    std::size_t const NUM_REPETITIONS = 1010;
+    std::size_t const NUM_REPETITIONS = 20;//1010;
 
     for( std::size_t ll = 0 ; ll < NUM_REPETITIONS ; ++ll )
     {
@@ -175,20 +204,26 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
         cl_int ret = CL_SUCCESS;
 
         ret  = queue.enqueueWriteBuffer( C, CL_TRUE, 0, NUM_BYTES_C, c.data() ); // enquing the write buffer means sending the data to the device
-
+        
+        double clkbegin, clkend;
+        double t;
+        clkbegin = rtclock();
         ret |= queue.enqueueNDRangeKernel( 
-              reduce, cl::NullRange, cl::NDRange( N_sz ), 
-              cl::NDRange( blockSize ), nullptr, &event );
+            reduce, cl::NullRange, cl::NDRange( N_sz ), 
+            cl::NDRange( blockSize ), nullptr, &event );
 
         queue.flush();
 
         assert( ret == CL_SUCCESS );
         event.wait();
+        clkend = rtclock();
+
+        t = clkend-clkbegin;
 
         cl_ulong when_kernel_queued    = 0;
         cl_ulong when_kernel_submitted = 0;
         cl_ulong when_kernel_started   = 0;
-        cl_ulong when_kernel_ended    = 0;
+        cl_ulong when_kernel_ended     = 0;
 
         ret  = event.getProfilingInfo< cl_ulong >( 
           CL_PROFILING_COMMAND_QUEUED, &when_kernel_queued );
@@ -211,11 +246,21 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
         assert( ret == CL_SUCCESS );
 
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
+        double const kernel_queue_time_elapsed = when_kernel_submitted - when_kernel_queued;
+        double const kernel_submission_time_elapsed = when_kernel_started - when_kernel_submitted;
 
-        if( ll > 10u )
+        if( ll < 20u )
         {
             num_of_turns += 1.0;
             average_time += (kernel_time_elapsed-average_time)/num_of_turns; // finding the running average
+            average_queue_time = (kernel_queue_time_elapsed - average_queue_time)/num_of_turns;
+            average_submission_time = (kernel_submission_time_elapsed - average_submission_time)/num_of_turns;
+            average_time_cpu += (t-average_time_cpu)/num_of_turns; // finding the average cpu running
+          std::cout << "kernel_time_elapsed in iteration " << ll << " : " << kernel_time_elapsed << std::endl;
+          std::cout << "kernel_queue_time_elapsed in iteration " << ll << " : " << kernel_queue_time_elapsed << std::endl;
+          std::cout << "kernel_submission_time_elapsed in iteration " << ll << " : " << kernel_submission_time_elapsed << std::endl;
+          std::cout << "time as measured on cpu in iteration " << ll << " : " << t*1.0e+9 << std::endl;
+          std::cout << "--------------------\n";
         }
 
         double sum_reduce = 0.0;
@@ -227,6 +272,8 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
 
 //        std::cout << "ll = " << std::setw( 5 ) << ll 
 //                  << " :: sum_reduce = " << sum_reduce << std::endl;
+      if(ll == NUM_REPETITIONS -1)
+        std::cout << "sum = \n" << sum_reduce << "\n";
     }
     
 //    if( num_of_turns > 1.0 )
@@ -234,7 +281,10 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
 //        average_time /= num_of_turns;
 //    }
     
-    std::cout << "average time taken = " << average_time << std::endl;
+    std::cout << "average time taken = " << average_time << "ns" << std::endl;
+    std::cout << "average queue time taken = " << average_queue_time << "ns" << std::endl;
+    std::cout << "average submission time taken = " << average_submission_time << "ns" << std::endl;
+    std::cout << "average time taken as measured on cpu = " << average_time_cpu*1.0e+9 << "ns" << std::endl;
     
     return 0;
 }

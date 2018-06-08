@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <assert.h>
+#include <sys/time.h>
 
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
@@ -45,6 +46,16 @@ static const char source[] =
 "       c[get_group_id(0)] = shm[0];\n"
 "     }\n"
 "}\n";
+
+double rtclock()
+{
+  struct timezone Tzp;
+  struct timeval Tp;
+  uint64_t stat;
+  stat = gettimeofday (&Tp, &Tzp);
+  if (stat != 0) printf("Error return from gettimeofday: %d",stat);
+  return(Tp.tv_sec + Tp.tv_usec*1.0e-6);
+}
 
 int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, size_t N) {
   //std::cout << "Using " << devices[ndev].getInfo<CL_DEVICE_NAME>() << std::endl;
@@ -142,12 +153,25 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
   };
  // The index [N,N_sz-1] are padded with zeros; in general it can be padded with the identity element for that operator 
 
-  // Allocate device buffers and transfer input data to device.
+
+        double clkbegin, clkend;
+        double t;
+        clkbegin = rtclock();
   cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
       b.size() * sizeof(double), b.data()); // input vector
+      //  queue.finish();
+        clkend = rtclock();
+        t = clkend-clkbegin;
+        std::cout << "time for data transfer of b = " << t*1.0e+9 << "ns" << std::endl;
 
+        clkbegin = rtclock();
   cl::Buffer C(context, CL_MEM_READ_WRITE,
       c.size() * sizeof(double) ); // output vector
+      //  queue.finish();
+        clkend = rtclock();
+        t = clkend-clkbegin;
+        std::cout << "time for data transfer of c = " << t*1.0e+9 << "ns" << std::endl;
+
 
   // Set kernel parameters.
   reduce.setArg(0, static_cast<cl_ulong>(N));
@@ -168,6 +192,11 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
 //  for(int i=0; i<1010;++i) {
   cl::Event event;
   // Launch kernel on the compute device.
+
+//  double clkbegin, clkend;
+//  double t;
+  clkbegin = rtclock();
+
   cl_int success =  queue.enqueueNDRangeKernel(
       reduce, 
       cl::NullRange, // an offset to compute the global id 
@@ -182,6 +211,10 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
   assert( success == CL_SUCCESS );
   queue.flush();
   event.wait();
+//  queue.finish();
+  clkend = rtclock();
+
+  t = clkend-clkbegin;
   //queue.finish();
   cl_ulong when_queued = 0;
   cl_ulong when_submitted = 0;
@@ -203,6 +236,9 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
 //  }
 //  std::cout << "kernel ran for " << average_time << " ns" << std::endl;
   std::cout << "kernel ran for " << elapsed << " ns" << std::endl;
+  std::cout << "kernel queuing time = " << when_submitted - when_queued << "ns" << std::endl;
+  std::cout << "kernel submission time = " << when_started - when_submitted << "ns" << std::endl;
+    std::cout << "time taken as measured on cpu = " << t*1.0e+9 << "ns" << std::endl;
   // Get result back to host; block until complete
   
   queue.enqueueReadBuffer(C, CL_TRUE, 0, c.size() * sizeof(double), c.data());
