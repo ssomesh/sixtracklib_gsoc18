@@ -24,7 +24,7 @@ fi
 x=`awk -F" " '{print $(NF-1)}' temp1.txt | tail -3 | head -1` # sed -n '3p'`
 y=`awk -F" " '{print $(NF-1)}' temp2.txt | tail -3 | head -1`  # sed -n '3p'`
 
-printf "%d\t %d\t%d\n" "$n" "$y" "$x" >> results.txt
+printf "%d\t %e\t%e\n" "$n" "$y" "$x" >> results.txt
 done
 
 rm -f temp1.txt temp2.txt # deleting the unwanted files
