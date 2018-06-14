@@ -33,8 +33,8 @@ int main()
     
     assert( ret == 0 ); /* if there was an error, ret would be != 0 */
     
-    /* Add 100 drifts to the buffer. For this example, let's just have 
-     * one simple constant length for all of them: */
+    /* Add NUM_OF_BEAM_ELEMENTS drifts to the buffer. For this example, let's
+     * just have one simple constant length for all of them: */
     
     for( st_block_size_t ii = 0 ; ii < NUM_OF_BEAM_ELEMENTS ; ++ii )
     {
