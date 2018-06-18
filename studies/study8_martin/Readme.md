@@ -34,7 +34,7 @@ Then create a build directory and configure the build process by providing the p
 ```
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${STUDY8_DIR}/external 
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${STUDY8_DIR}/external -DGTEST_ROOT=/opt/googletest
 ```
 The output should contain no errors. Then build and install by the usual combination of 
 ```
