@@ -6,3 +6,4 @@ study4: (in progress) unit test for track.h
 study5: example for using cffi with python
 study6: simple pyopencl example
 study7: (in progress) example differential algebra
+study8: (proposed) example use of external sixtracklib
