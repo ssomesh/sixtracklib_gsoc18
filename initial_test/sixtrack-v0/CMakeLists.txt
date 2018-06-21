@@ -12,9 +12,8 @@ find_package( OpenCL REQUIRED )
 include_directories( ${OpenCL_INCLUDE_DIR} )
 add_executable( parallel_drift parallel_drift.cpp )
              
-target_link_libraries( parallel_drift SixTracklib::sixtrack )
+target_link_libraries( parallel_drift SixTracklib::sixtrack ${OpenCL_LIBRARY} )
 
 set_property( TARGET parallel_drift PROPERTY CXX_STANDARD 11 )
 set_property( TARGET parallel_drift PROPERTY CXX_STANDARD_REQUIRED ON )
-set_property( TARGET parallel_drift PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic ${OpenCL_LIBRARY} )
-
+set_property( TARGET parallel_drift PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic) 
