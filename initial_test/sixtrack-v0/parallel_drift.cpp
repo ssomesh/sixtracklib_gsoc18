@@ -28,6 +28,9 @@
 #include "sixtracklib/common/beam_elements.h"
 #include "sixtracklib/common/particles.h"
 
+#define __CL_ENABLE_EXCEPTIONS
+#include <CL/cl.hpp>
+
 int main()
 {
     /* We will use 9+ beam element blocks in this example and do not 
@@ -64,7 +67,7 @@ int main()
     /* Check if we *really* have the correct number of beam elements and 
      * if they really are all drifts */
     
-    assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
+   assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
             NUM_OF_BEAM_ELEMENTS );
     
     /* The beam_elements container is currently not serialized yet -> 
@@ -75,7 +78,7 @@ int main()
         &beam_elements, double{ 0.1 } );
     
     assert( drift_exact != nullptr );
-    
+                                                    
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
             ( NUM_OF_BEAM_ELEMENTS + 1 ) );
     
@@ -173,7 +176,41 @@ int main()
         st_Blocks_get_const_data_end( &beam_elements ) );
     
     /* this is a completly different buffer, but it contains the same data: */
+  
+    // Get list of OpenCL platforms.
+    std::vector<cl::Platform> platform;
+    cl::Platform::get(&platform);
+
+    if (platform.empty()) {
+      std::cerr << "OpenCL platforms not found." << std::endl;
+      return 1;
+    }
+    // Get all available devices.
+    std::vector<cl::Device> devices;
+    for(auto p = platform.begin(); devices.empty() && p != platform.end(); p++) {
+      std::vector<cl::Device> pldev;
+      try {
+        p->getDevices(CL_DEVICE_TYPE_ALL, &pldev);
+        for(auto d = pldev.begin(); d != pldev.end(); d++) {
+          if (!d->getInfo<CL_DEVICE_AVAILABLE>()) continue;
+          devices.push_back(*d);
+        }
+      } catch(...) {
+        devices.clear();
+      }
+    }
+
+    if (devices.empty()) {
+      std::cerr << "GPUs with double precision not found." << std::endl;
+      return 1;
+    }
+
+    // Create context
+    cl::Context context;
+    context = cl::Context(devices);
     
+    cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input buffer
+
     assert( copy_buffer.data() != 
             st_Blocks_get_const_data_begin( &beam_elements ) );
     
@@ -255,7 +292,7 @@ int main()
     std::cout << "\r\n\r\n"
               << "Finished successfully!" << std::endl;
     
-    /* Avoiding memory and ressource leaks, we have to clean up after 
+    /* Avoiding memory and resource leaks, we have to clean up after 
      * ourselves; Since copied_beam_elements uses external storage, we 
      * do not have to call the st_Blocks_free function on it, but it doesn't
      * hurt and could be considered safer down the road, as this behaviour 
