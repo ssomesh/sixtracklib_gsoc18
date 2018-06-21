@@ -1,3 +1,20 @@
+/*
+* TODO:
+* 1. serialize on the CPU -- done
+  2. copy data to  the GPU
+  3. unserailize (remap) on the GPU -- use a kernel launched with 1 thread to do this
+  4. launch a kernel to perform the computation in parallel on the GPU (this is the actual computation)
+  5. copy the result back to the cpu 
+  6. unserialize the result on the CPUs
+
+  Done!
+
+*/
+
+
+
+
+
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -77,7 +94,7 @@ int main()
     ret = st_Blocks_serialize( &beam_elements );
     
     assert( ret == 0 );
-    assert( st_Blocks_are_serialized( &beam_elements ) );
+    assert( st_Blocks_are_serialized( &beam_elements ) ); // serialization on CPU done.
     
     /* Next, let's iterate over all the beam_elements in the buffer and 
      * print out the properties -> we expect that NUM_OF_BEAM_ELEMENTS
@@ -239,7 +256,7 @@ int main()
               << "Finished successfully!" << std::endl;
     
     /* Avoiding memory and ressource leaks, we have to clean up after 
-     * ourselves; Since copied_beam_elements useses external storage, we 
+     * ourselves; Since copied_beam_elements uses external storage, we 
      * do not have to call the st_Blocks_free function on it, but it doesn't
      * hurt and could be considered safer down the road, as this behaviour 
      * might change in the future */
