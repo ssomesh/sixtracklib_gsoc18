@@ -14,5 +14,5 @@ target_link_libraries( parallel_drift SixTracklib::sixtrack )
 
 set_property( TARGET parallel_drift PROPERTY CXX_STANDARD 11 )
 set_property( TARGET parallel_drift PROPERTY CXX_STANDARD_REQUIRED ON )
-set_property( TARGET parallel_drift PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic -lOpenCL -I/usr/local/cuda-8.0/include/ -L/usr/lib64/nvidia/ )
+set_property( TARGET parallel_drift PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic -lOpenCL -I/usr/local/cuda-9.1/include/ -L/usr/lib64/nvidia/ )
 
