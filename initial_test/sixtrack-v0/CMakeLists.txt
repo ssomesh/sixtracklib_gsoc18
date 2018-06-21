@@ -8,11 +8,13 @@ project( sixtracklib_gsoc2018_study8 )
 set( SixTracklib_DIR "${CMAKE_SOURCE_DIR}/external/lib/cmake" )
 find_package( SixTracklib REQUIRED )
 
+find_package( OpenCL REQUIRED )
+include_directories( ${OpenCL_INCLUDE_DIR} )
 add_executable( parallel_drift parallel_drift.cpp )
              
 target_link_libraries( parallel_drift SixTracklib::sixtrack )
 
 set_property( TARGET parallel_drift PROPERTY CXX_STANDARD 11 )
 set_property( TARGET parallel_drift PROPERTY CXX_STANDARD_REQUIRED ON )
-set_property( TARGET parallel_drift PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic -lOpenCL -I/usr/local/cuda-9.1/include/ -L/usr/lib64/nvidia/ )
+set_property( TARGET parallel_drift PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic ${OpenCL_LIBRARY} )
 
