@@ -12,9 +12,6 @@
 */
 
 
-
-
-
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
@@ -30,6 +27,7 @@
 
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
+
 
 int main()
 {
@@ -67,7 +65,7 @@ int main()
     /* Check if we *really* have the correct number of beam elements and 
      * if they really are all drifts */
     
-   assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
+    assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
             NUM_OF_BEAM_ELEMENTS );
     
     /* The beam_elements container is currently not serialized yet -> 
@@ -78,7 +76,7 @@ int main()
         &beam_elements, double{ 0.1 } );
     
     assert( drift_exact != nullptr );
-                                                    
+    
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
             ( NUM_OF_BEAM_ELEMENTS + 1 ) );
     
@@ -161,30 +159,15 @@ int main()
     
     std::cout.flush();
     
-    /* Let's simulate how to use the serialized data to be passed to 
-     * another context - for example to a kernel function in a kernel running 
-     * on a GPU or FPGA - where we will then reconstruct the data by 
-     * unserializing the buffer */
-    
-    /* Firstly, copy the buffer to an array large enough to be hold all 
-     * the data. Use the range-based constructor of the vector and the 
-     * data-range iterators pointing to the "data begin" and "data end" 
-     * positions in the serialized buffer*/
-    
-    std::vector< uint8_t > copy_buffer( 
-        st_Blocks_get_const_data_begin( &beam_elements ), 
-        st_Blocks_get_const_data_end( &beam_elements ) );
-    
-    /* this is a completly different buffer, but it contains the same data: */
-  
-    // Get list of OpenCL platforms.
+/************************** Preparing grounds for OpenCL *******/
     std::vector<cl::Platform> platform;
     cl::Platform::get(&platform);
+    if(platform.empty()) {
+        std::cerr << "OpenCL platforms not found." << std::endl;
+        return 1;
+      }
+      else std::cout << "Good" << std::endl;
 
-    if (platform.empty()) {
-      std::cerr << "OpenCL platforms not found." << std::endl;
-      return 1;
-    }
     // Get all available devices.
     std::vector<cl::Device> devices;
     for(auto p = platform.begin(); devices.empty() && p != platform.end(); p++) {
@@ -204,12 +187,36 @@ int main()
       std::cerr << "GPUs with double precision not found." << std::endl;
       return 1;
     }
-
-    // Create context
+      // Create context
     cl::Context context;
     context = cl::Context(devices);
+
+//    std::cout << "Device list" << std::endl;
+//    for(unsigned int jj=0; jj<devices.size(); jj++){
+//      std::cout << "Name of devicei " << jj<<" : "<<devices[jj].getInfo<CL_DEVICE_NAME>() << std::endl;
+//      std::cout << "resolution of device timer for device " << jj <<" : "<<devices[jj].getInfo<CL_DEVICE_PROFILING_TIMER_RESOLUTION>() << std::endl;
+//    };
+/**********************************************/
+
+    /* Let's simulate how to use the serialized data to be passed to 
+     * another context - for example to a kernel function in a kernel running 
+     * on a GPU or FPGA - where we will then reconstruct the data by 
+     * unserializing the buffer */
     
-    cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input buffer
+    /* Firstly, copy the buffer to an array large enough to be hold all 
+     * the data. Use the range-based constructor of the vector and the 
+     * data-range iterators pointing to the "data begin" and "data end" 
+     * positions in the serialized buffer*/
+    
+    std::vector< uint8_t > copy_buffer( 
+        st_Blocks_get_const_data_begin( &beam_elements ), 
+        st_Blocks_get_const_data_end( &beam_elements ) );
+    
+    /* this is a completly different buffer, but it contains the same data: */
+    
+
+    // Allocate device buffers and transfer input data to device.
+    cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input vector
 
     assert( copy_buffer.data() != 
             st_Blocks_get_const_data_begin( &beam_elements ) );
@@ -218,6 +225,8 @@ int main()
                 st_Blocks_get_const_data_begin( &beam_elements ), 
                 copy_buffer.size() ) );
     
+
+
     /* Now reconstruct the copied data into a different st_Blocks container */
     
     st_Blocks copied_beam_elements;
@@ -292,7 +301,7 @@ int main()
     std::cout << "\r\n\r\n"
               << "Finished successfully!" << std::endl;
     
-    /* Avoiding memory and resource leaks, we have to clean up after 
+    /* Avoiding memory and ressource leaks, we have to clean up after 
      * ourselves; Since copied_beam_elements uses external storage, we 
      * do not have to call the st_Blocks_free function on it, but it doesn't
      * hurt and could be considered safer down the road, as this behaviour 
@@ -302,8 +311,10 @@ int main()
     st_Blocks_free( &copied_beam_elements );
     
     std::cout.flush();
-    
+
+
     return 0;
-}
+
+  }
 
 /* end studies/study8/use_blocks.cpp */
