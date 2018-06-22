@@ -64,8 +64,7 @@ typedef struct NS(Particles)
         particle_id __attribute__(( aligned( 8 ) ));
     
     NS(block_num_elements_t) num_of_particles  __attribute__(( aligned( 8 ) ));   
-}
-NS(Particles);
+} NS(Particles);
 
 
 
