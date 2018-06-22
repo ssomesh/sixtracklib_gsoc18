@@ -31,6 +31,45 @@
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
 
+typedef struct NS(Particles)
+{
+
+    SIXTRL_GLOBAL_DEC SIXTRL_REAL_T* SIXTRL_RESTRICT 
+        s      __attribute__(( aligned( 8 ) ));     /* [m] */
+        
+    SIXTRL_GLOBAL_DEC SIXTRL_REAL_T* SIXTRL_RESTRICT 
+        x      __attribute__(( aligned( 8 ) ));     /* [m] */
+    
+    SIXTRL_GLOBAL_DEC SIXTRL_REAL_T* SIXTRL_RESTRICT 
+        y      __attribute__(( aligned( 8 ) ));     /* [m] */
+        
+    SIXTRL_GLOBAL_DEC SIXTRL_REAL_T* SIXTRL_RESTRICT 
+        px     __attribute__(( aligned( 8 ) ));    /* Px/P0 */
+        
+    SIXTRL_GLOBAL_DEC SIXTRL_REAL_T* SIXTRL_RESTRICT 
+        py     __attribute__(( aligned( 8 ) ));    /* Py/P0 */
+        
+    SIXTRL_GLOBAL_DEC SIXTRL_REAL_T* SIXTRL_RESTRICT 
+        sigma  __attribute__(( aligned( 8 ) )); 
+            /* s-beta0*c*t  where t is the time
+                      since the beginning of the simulation */
+
+    SIXTRL_GLOBAL_DEC SIXTRL_REAL_T* SIXTRL_RESTRICT 
+        rpp    __attribute__(( aligned( 8 ) ));    /* ratio P0 /P */
+        
+    SIXTRL_GLOBAL_DEC SIXTRL_REAL_T* SIXTRL_RESTRICT 
+        rvv    __attribute__(( aligned( 8 ) ));    /* ratio beta / beta0 */
+        
+    SIXTRL_GLOBAL_DEC SIXTRL_INT64_T* SIXTRL_RESTRICT 
+        particle_id __attribute__(( aligned( 8 ) ));
+    
+    NS(block_num_elements_t) num_of_particles  __attribute__(( aligned( 8 ) ));   
+}
+NS(Particles);
+
+
+
+
 static const char source[] =
 "#if defined(cl_khr_fp64)\n"
 "#  pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
@@ -354,7 +393,7 @@ int main()
    int ret = st_Blocks_init(&particles_buffer, NUM_BLOCKS, PARTICLES_DATA_CAPACITY);
    assert(ret == 0); 
    st_Particles* particles = st_Blocks_add_particles(&particles_buffer, NUM_PARTICLES );
-
+   
 
 
 
