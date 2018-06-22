@@ -51,9 +51,9 @@ static const char source[] =
 "       )\n"
 "{\n"
 "    size_t gid = get_global_id(0);\n"
-"    printf(\"Hello from GPU\");\n"
-"    NS(Blocks) copied_ beam_elements;\n"
-"    st_Blocks_unserialize( &copied_beam_elements, copy_buffer);\n"
+//"    printf(\"Hello from GPU\");\n"
+"    NS(Blocks) copied_beam_elements;\n"
+"    NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);\n"
 "}\n"
 
 
@@ -333,7 +333,7 @@ int main()
 //    
     st_Blocks copied_beam_elements;
     st_Blocks_preset( &copied_beam_elements );
-    cl::Buffer C(context, CL_MEM_READ_WRITE, sizeof(copied_beam_elements) ); // a separate container
+///    cl::Buffer C(context, CL_MEM_READ_WRITE, sizeof(copied_beam_elements) ); // a separate container
 
     
     st_Blocks particles;    
@@ -346,7 +346,15 @@ int main()
     //TODO: populating the particles struct for each of the particles
    //       (Not clear how to do it)
    // Send this to the kernel unserialize as well
-   
+   st_Blocks particles_buffer;
+   st_Blocks_preset( &particles_buffer ); 
+   st_block_size_t const NUM_BLOCKS = 2u; // taken from test_particles.cpp ??
+   st_block_num_elements_t const NUM_PARTICLES = ( st_block_num_elements_t )1000u;
+   st_block_size_t const PARTICLES_DATA_CAPACITY =1048576u
+   int ret = st_Blocks_init(&particles_buffer, NUM_BLOCKS, PARTICLES_DATA_CAPACITY);
+   assert(ret == 0); 
+   st_Particles* particles = st_Blocks_add_particles(&particles_buffer, NUM_PARTICLES );
+
 
 
 
