@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.3 )
 
-project( sixtracklib_gsoc2018_study8 )
+project( sixtracklib_gsoc2018_v0 )
 
 # We know where to find the SixTracklib installation -> 
 # set the SixTracklib_DIR variable to help CMake finding it:
