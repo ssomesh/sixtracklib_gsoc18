@@ -1,1 +1,0 @@
-/usr/bin/c++  -g  -rdynamic CMakeFiles/parallel_drift.dir/parallel_drift.cpp.o  -o parallel_drift -Wl,-rpath,/home/sosingh/sixtracklib_gsoc18/studies/study8_martin/external/lib /home/sosingh/sixtracklib_gsoc18/studies/study8_martin/external/lib/libsixtrackd.so 

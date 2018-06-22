@@ -1,1 +1,0 @@
-/usr/bin/c++  -g  -rdynamic CMakeFiles/use_blocks.dir/use_blocks.cpp.o  -o use_blocks -Wl,-rpath,/home/sosingh/sixtracklib_gsoc18/studies/study8_martin/external/lib /home/sosingh/sixtracklib_gsoc18/studies/study8_martin/external/lib/libsixtrackd.so 

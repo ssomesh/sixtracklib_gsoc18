@@ -1,3 +1,0 @@
-/home/sosingh/sixtracklib_gsoc18/initial_test/sixtrack-v0/build/CMakeFiles/rebuild_cache.dir
-/home/sosingh/sixtracklib_gsoc18/initial_test/sixtrack-v0/build/CMakeFiles/parallel_drift.dir
-/home/sosingh/sixtracklib_gsoc18/initial_test/sixtrack-v0/build/CMakeFiles/edit_cache.dir

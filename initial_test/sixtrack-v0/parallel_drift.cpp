@@ -8,6 +8,8 @@
   6. unserialize the result on the CPUs
 
   Done!
+ // IMP: The idea is to pass the memory (i.e. the serialzed array of type unsigned char) to the kernel and to reconstruct the NS(Blocks) instance then from there.
+  So, NS(Blocks) needs to be reconstructed on the GPU and not passed to the GPU
 
 */
 
@@ -52,7 +54,8 @@ static const char source[] =
 "    printf(\"Hello from GPU\");\n"
 "    NS(Blocks) copied_ beam_elements;\n"
 "    st_Blocks_unserialize( &copied_beam_elements, copy_buffer);\n"
-"}\n";
+"}\n"
+
 
 "kernel void track_drift_particle(\n" // a parallel version of Track_drift_particle from track.h
 //"       ulong n,\n"
@@ -358,13 +361,13 @@ int main()
     queue.flush();
 
 
-    // Assuming the particles block and beam_elements block are unserialized on the GPU, we enqueue the kernel Track_drift_particle
+    // Assuming the particles block and beam_elements block are unserialized on the GPU, we enqueue the kernel track_drift_particle
 
+    cl::Kernel track_drift_particle(program, "track_drift_particle");
     numThreads = NUM_OF_BEAM_ELEMENTS; // assign one thread to each bean element
-    blockSize =reduce.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( devices[ndev]); 
-    cl::Kernel (program, "track_drift_particle");
-    track_drift_particle.setArg(0,B);
-    track_drift_particle.setArg(1,D);
+    blockSize =track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( devices[ndev]); 
+//    track_drift_particle.setArg(0,B);
+//    track_drift_particle.setArg(1,D);
     queue.enqueueNDRangeKernel( 
     track_drift_particle, cl::NullRange, cl::NDRange( numThreads ), 
     cl::NDRange(blockSize ));
