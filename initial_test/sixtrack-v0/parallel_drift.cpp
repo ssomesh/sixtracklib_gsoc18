@@ -17,6 +17,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <stdio.h>
 #include <iomanip>
 #include <vector>
 
@@ -28,6 +29,27 @@
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
 
+static const char source[] =
+"#if defined(cl_khr_fp64)\n"
+"#  pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
+"#elif defined(cl_amd_fp64)\n"
+"#  pragma OPENCL EXTENSION cl_amd_fp64: enable\n"
+"#else\n"
+"# error double precision is not supported\n"
+"#endif\n"
+//"#include \"../external/include/sixtracklib/_impl/definitions.h\"\n"
+//"#include \"../external/include/sixtracklib/common/blocks.h\"\n"
+//"#include \"../external/include/sixtracklib/common/beam_elements.h\"\n"
+//"#include \"../external/include/sixtracklib/common/particles.h\"\n"
+"kernel void unserialize(\n"
+//"       ulong n,\n"
+"       global uchar *copy_buffer\n" // uint8_t is uchar
+//"       global double *c\n"
+"       )\n"
+"{\n"
+"    size_t gid = get_global_id(0);\n"
+"    printf(\"Hello from GPU\");\n"
+"}\n";
 
 int main()
 {
@@ -217,100 +239,130 @@ int main()
 
     // Allocate device buffers and transfer input data to device.
     cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input vector
+    // launch a kernel with 1 thread and pass the copy_buffer 
+    // and call st_Blocks_unserialize on it
 
-    assert( copy_buffer.data() != 
-            st_Blocks_get_const_data_begin( &beam_elements ) );
-    
-    assert( 0 == std::memcmp( copy_buffer.data(), 
-                st_Blocks_get_const_data_begin( &beam_elements ), 
-                copy_buffer.size() ) );
-    
+    int ndev = 0; // specifying the id of the device to be used
+    cl::CommandQueue queue(context, devices[ndev]);
+    // Compile OpenCL program for found devices.
+    cl::Program program(context, cl::Program::Sources(
+        1, std::make_pair(source, strlen(source))
+        ));
 
-
-    /* Now reconstruct the copied data into a different st_Blocks container */
-    
-    st_Blocks copied_beam_elements;
-    st_Blocks_preset( &copied_beam_elements );
-    
-    ret = st_Blocks_unserialize( &copied_beam_elements, copy_buffer.data() );
-    
-    /* copied_beam_elements should contain the identical data than 
-     * beam_elements, but the memory addresses should be different -> 
-     * copied_beam_elements use the copy_buffer as storage, 
-     * beam_elements has it's own data stored inside itself */
-    
-    assert( st_Blocks_get_const_data_begin( &copied_beam_elements ) ==
-            copy_buffer.data() );
-    
-    assert( st_Blocks_get_num_of_blocks( &copied_beam_elements ) ==
-            st_Blocks_get_num_of_blocks( &beam_elements ) );
-    
-    /* Iterate over the copy -> we expect it to have the same data as before */
-    
-    st_BlockInfo const* copy_it  = 
-        st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
-        
-    st_BlockInfo const* copy_end =
-        st_Blocks_get_const_block_infos_end( &copied_beam_elements );
-        
-    std::cout << "\r\n"
-              << "Print the copied beam_elements: \r\n"
-              << "\r\n";
-        
-    for( ii = 0 ; copy_it != copy_end ; ++copy_it, ++ii )
-    {
-        std::cout << std::setw( 6 ) << ii << " | type: ";
-        
-        auto const type_id = st_BlockInfo_get_type_id( copy_it );
-        
-        switch( type_id )
-        {
-            case st_BLOCK_TYPE_DRIFT:
-            {
-                st_Drift const* drift = 
-                    st_Blocks_get_const_drift( copy_it );
-                
-                std::cout << "drift        | length = "
-                          << std::setw( 10 ) 
-                          << st_Drift_get_length( drift )
-                          << " [m] \r\n";
-                            
-                break;
-            }
-            
-            case st_BLOCK_TYPE_DRIFT_EXACT:
-            {
-                st_DriftExact const* drift_exact =
-                    st_Blocks_get_const_drift_exact( copy_it );
-                
-                std::cout << "drift_exact  | length = "
-                          << std::setw( 10 )
-                          << st_DriftExact_get_length( drift_exact )
-                          << " [m] \r\n";
-                          
-                break;
-            }
-            
-            default:
-            {
-                std::cout << "unknown     | --> skipping\r\n";
-            }
-        };
+    try {
+    program.build(devices);
+    } catch (const cl::Error&) {
+    std::cerr
+      << "OpenCL compilation error" << std::endl
+      << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devices[ndev])
+      << std::endl;
+    throw;
     }
-    
-    std::cout << "\r\n\r\n"
-              << "Finished successfully!" << std::endl;
-    
-    /* Avoiding memory and ressource leaks, we have to clean up after 
-     * ourselves; Since copied_beam_elements uses external storage, we 
-     * do not have to call the st_Blocks_free function on it, but it doesn't
-     * hurt and could be considered safer down the road, as this behaviour 
-     * might change in the future */
-    
-    st_Blocks_free( &beam_elements );
-    st_Blocks_free( &copied_beam_elements );
-    
-    std::cout.flush();
+
+    int numThreads = 1;
+    int blockSize = 1;
+    cl::Kernel unserialize(program, "unserialize");
+    unserialize.setArg(0,B);
+    queue.enqueueNDRangeKernel( 
+    unserialize, cl::NullRange, cl::NDRange( numThreads ), 
+    cl::NDRange(blockSize ));
+    queue.flush();
+
+
+
+//    assert( copy_buffer.data() != 
+//            st_Blocks_get_const_data_begin( &beam_elements ) );
+//    
+//    assert( 0 == std::memcmp( copy_buffer.data(), 
+//                st_Blocks_get_const_data_begin( &beam_elements ), 
+//                copy_buffer.size() ) );
+//    
+//
+//
+//    /* Now reconstruct the copied data into a different st_Blocks container */
+//    
+//    st_Blocks copied_beam_elements;
+//    st_Blocks_preset( &copied_beam_elements );
+//    
+//    ret = st_Blocks_unserialize( &copied_beam_elements, copy_buffer.data() );
+//    
+//    /* copied_beam_elements should contain the identical data than 
+//     * beam_elements, but the memory addresses should be different -> 
+//     * copied_beam_elements use the copy_buffer as storage, 
+//     * beam_elements has it's own data stored inside itself */
+//    
+//    assert( st_Blocks_get_const_data_begin( &copied_beam_elements ) ==
+//            copy_buffer.data() );
+//    
+//    assert( st_Blocks_get_num_of_blocks( &copied_beam_elements ) ==
+//            st_Blocks_get_num_of_blocks( &beam_elements ) );
+//    
+//    /* Iterate over the copy -> we expect it to have the same data as before */
+//    
+//    st_BlockInfo const* copy_it  = 
+//        st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
+//        
+//    st_BlockInfo const* copy_end =
+//        st_Blocks_get_const_block_infos_end( &copied_beam_elements );
+//        
+//    std::cout << "\r\n"
+//              << "Print the copied beam_elements: \r\n"
+//              << "\r\n";
+//        
+//    for( ii = 0 ; copy_it != copy_end ; ++copy_it, ++ii )
+//    {
+//        std::cout << std::setw( 6 ) << ii << " | type: ";
+//        
+//        auto const type_id = st_BlockInfo_get_type_id( copy_it );
+//        
+//        switch( type_id )
+//        {
+//            case st_BLOCK_TYPE_DRIFT:
+//            {
+//                st_Drift const* drift = 
+//                    st_Blocks_get_const_drift( copy_it );
+//                
+//                std::cout << "drift        | length = "
+//                          << std::setw( 10 ) 
+//                          << st_Drift_get_length( drift )
+//                          << " [m] \r\n";
+//                            
+//                break;
+//            }
+//            
+//            case st_BLOCK_TYPE_DRIFT_EXACT:
+//            {
+//                st_DriftExact const* drift_exact =
+//                    st_Blocks_get_const_drift_exact( copy_it );
+//                
+//                std::cout << "drift_exact  | length = "
+//                          << std::setw( 10 )
+//                          << st_DriftExact_get_length( drift_exact )
+//                          << " [m] \r\n";
+//                          
+//                break;
+//            }
+//            
+//            default:
+//            {
+//                std::cout << "unknown     | --> skipping\r\n";
+//            }
+//        };
+//    }
+//    
+//    std::cout << "\r\n\r\n"
+//              << "Finished successfully!" << std::endl;
+//    
+//    /* Avoiding memory and ressource leaks, we have to clean up after 
+//     * ourselves; Since copied_beam_elements uses external storage, we 
+//     * do not have to call the st_Blocks_free function on it, but it doesn't
+//     * hurt and could be considered safer down the road, as this behaviour 
+//     * might change in the future */
+//    
+//    st_Blocks_free( &beam_elements );
+//    st_Blocks_free( &copied_beam_elements );
+//    
+//    std::cout.flush();
 
 
     return 0;
