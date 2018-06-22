@@ -44,13 +44,68 @@ static const char source[] =
 "kernel void unserialize(\n"
 //"       ulong n,\n"
 "       global uchar *copy_buffer\n" // uint8_t is uchar
+//"       global NS(Blocks) copied_beam_elements\n" // uint8_t is uchar
 //"       global double *c\n"
 "       )\n"
 "{\n"
 "    size_t gid = get_global_id(0);\n"
 "    printf(\"Hello from GPU\");\n"
+"    NS(Blocks) copied_ beam_elements;\n"
+"    st_Blocks_unserialize( &copied_beam_elements, copy_buffer);\n"
 "}\n";
 
+"kernel void track_drift_particle(\n" // a parallel version of Track_drift_particle from track.h
+//"       ulong n,\n"
+"       global uchar *particles_buffer\n" // for the particles
+//"       global NS(Blocks) copied_beam_elements\n" // uint8_t is uchar
+//"       global double *c\n"
+"       )\n"
+"{\n"
+"    size_t gid = get_global_id(0);\n" // element id
+"      auto const type_id = st_BlockInfo_get_type_id( gid );\n"
+      
+"        switch( type_id )\n"
+"        {\n"
+"            case st_BLOCK_TYPE_DRIFT:\n"
+"            {\n"
+"                st_Drift const* drift = \n"
+"                    st_Blocks_get_const_drift( gid );\n"
+"                    double const rpp = 1;\n" // keeping rpp constant 
+"                    double const px = 1;\n" // keeping px constant 
+"                    double const py = 1;\n" // keeping py constant 
+"                    double const dsigma = 1.0f - NS(Particles_get_rvv_value)(particles, gid) * (1.0f + 0.5f * (px * px + py *py));\n" 
+"    double sigma = NS(Particles_get_sigma_value)( particles, gid );\n"
+"    double s     = NS(Particles_get_s_value)( particles, gid );\n"
+"    double x     = NS(Particles_get_x_value)( particles, gid );\n"
+"    double y     = NS(Particles_get_y_value)( particles, gid );\n"
+    
+"    sigma += length * dsigma;\n"
+"    s     += length;\n"
+"    x     += length * px;\n"
+"    y     += length * py;\n"
+    
+"    NS(Particles_set_s_value)( particles, gid, s );\n"
+"    NS(Particles_set_x_value)( particles, gid, x );\n"
+"    NS(Particles_set_y_value)( particles, gid, y );\n"
+"    NS(Particles_set_sigma_value)( particles, gid, sigma );\n"
+                            
+"                break;\n"
+"            }\n"
+            
+"            case st_BLOCK_TYPE_DRIFT_EXACT:\n"
+"            {\n"
+"                st_DriftExact const* drift_exact =\n"
+"                    st_Blocks_get_const_drift_exact( gid );\n"
+"                break;\n"
+"            }\n"
+            
+"            default:\n"
+"            {\n"
+"                printf( \"unknown     | --> skipping\r\n\");\n"
+"            }\n"
+"        };\n"
+
+"}\n";
 int main()
 {
     /* We will use 9+ beam element blocks in this example and do not 
@@ -259,14 +314,6 @@ int main()
     throw;
     }
 
-    int numThreads = 1;
-    int blockSize = 1;
-    cl::Kernel unserialize(program, "unserialize");
-    unserialize.setArg(0,B);
-    queue.enqueueNDRangeKernel( 
-    unserialize, cl::NullRange, cl::NDRange( numThreads ), 
-    cl::NDRange(blockSize ));
-    queue.flush();
 
 
 
@@ -281,8 +328,52 @@ int main()
 //
 //    /* Now reconstruct the copied data into a different st_Blocks container */
 //    
-//    st_Blocks copied_beam_elements;
-//    st_Blocks_preset( &copied_beam_elements );
+    st_Blocks copied_beam_elements;
+    st_Blocks_preset( &copied_beam_elements );
+    cl::Buffer C(context, CL_MEM_READ_WRITE, sizeof(copied_beam_elements) ); // a separate container
+
+    
+    st_Blocks particles;    
+    st_Blocks_preset( &particles );
+   
+    // assuming the same number of particles as the number of beam elements 
+    ret = st_Blocks_init( &particles, MAX_NUM_BEAM_ELEMENTS, 
+                              BEAM_ELEMENTS_DATA_CAPACITY );
+
+    //TODO: populating the particles struct for each of the particles
+   //       (Not clear how to do it)
+   // Send this to the kernel unserialize as well
+   
+
+
+
+    int numThreads = 1;
+    int blockSize = 1;
+    cl::Kernel unserialize(program, "unserialize");
+    unserialize.setArg(0,B);
+//    unserialize.setArg(1,C);
+    queue.enqueueNDRangeKernel( 
+    unserialize, cl::NullRange, cl::NDRange( numThreads ), 
+    cl::NDRange(blockSize ));
+    queue.flush();
+
+
+    // Assuming the particles block and beam_elements block are unserialized on the GPU, we enqueue the kernel Track_drift_particle
+
+    numThreads = NUM_OF_BEAM_ELEMENTS; // assign one thread to each bean element
+    blockSize =reduce.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( devices[ndev]); 
+    cl::Kernel (program, "track_drift_particle");
+    track_drift_particle.setArg(0,B);
+    track_drift_particle.setArg(1,D);
+    queue.enqueueNDRangeKernel( 
+    track_drift_particle, cl::NullRange, cl::NDRange( numThreads ), 
+    cl::NDRange(blockSize ));
+    queue.flush();
+    
+
+    
+
+
 //    
 //    ret = st_Blocks_unserialize( &copied_beam_elements, copy_buffer.data() );
 //    
