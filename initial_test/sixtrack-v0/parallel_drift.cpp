@@ -31,7 +31,7 @@
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
 
-typedef struct NS(Particles)
+typedef struct NS(ParticlesSpecial)
 {
 
     SIXTRL_GLOBAL_DEC SIXTRL_REAL_T* SIXTRL_RESTRICT 
@@ -64,8 +64,76 @@ typedef struct NS(Particles)
         particle_id __attribute__(( aligned( 8 ) ));
     
     NS(block_num_elements_t) num_of_particles  __attribute__(( aligned( 8 ) ));   
-} NS(Particles);
+} NS(ParticlesSpecial);
 
+
+NS(ParticlesSpecial)* NS(Blocks_add_particles_special)( 
+    NS(Blocks)* SIXTRL_RESTRICT blocks, 
+    NS(block_num_elements_t) const num_of_particles )
+{
+    SIXTRL_GLOBAL_DEC NS(ParticlesSpecial)* ptr_particles = 0;
+    
+    SIXTRL_STATIC NS(block_size_t) const NUM_ATTR_DATA_POINTERS = 9u;
+    SIXTRL_STATIC NS(block_size_t) const REAL_SIZE = sizeof( SIXTRL_REAL_T  );
+    SIXTRL_STATIC NS(block_size_t) const I64_SIZE  = sizeof( SIXTRL_INT64_T );
+    
+    NS(block_size_t) const data_attr_sizes[] =
+    {
+        REAL_SIZE, REAL_SIZE, REAL_SIZE, REAL_SIZE,
+        REAL_SIZE, REAL_SIZE, REAL_SIZE, REAL_SIZE, I64_SIZE
+    };
+    
+    if( ( blocks != 0 ) && 
+        ( num_of_particles > ( NS(block_num_elements_t) )0u ) )
+    {
+        NS(ParticlesSpecial) particles;
+        
+        NS(block_size_t) const num = ( NS(block_size_t) )num_of_particles;
+    
+        NS(block_size_t) const data_attr_offsets[] = 
+        {
+            ( NS(block_size_t) )offsetof( NS(ParticlesSpecial), s ),
+            ( NS(block_size_t) )offsetof( NS(ParticlesSpecial), x ),
+            ( NS(block_size_t) )offsetof( NS(ParticlesSpecial), y ),
+            ( NS(block_size_t) )offsetof( NS(ParticlesSpecial), px ),
+            ( NS(block_size_t) )offsetof( NS(ParticlesSpecial), py ),
+            ( NS(block_size_t) )offsetof( NS(ParticlesSpecial), sigma ),
+            ( NS(block_size_t) )offsetof( NS(ParticlesSpecial), rpp ),
+            ( NS(block_size_t) )offsetof( NS(ParticlesSpecial), rvv ),
+            ( NS(block_size_t) )offsetof( NS(ParticlesSpecial), particle_id )
+        };
+        
+        NS(block_size_t) const data_attr_counts[] =
+        {
+            num, num, num, num, num, num, num, num, num
+        };
+        
+        NS(BlockInfo)* ptr_info_block = 0;
+        
+        particles.s                = NULL;
+        particles.x                = NULL;
+        particles.y                = NULL;
+        particles.px               = NULL;
+        particles.py               = NULL;
+        particles.sigma            = NULL;
+        particles.rpp              = NULL;
+        particles.rvv              = NULL;
+        particles.particle_id      = NULL;
+        particles.num_of_particles = num_of_particles;
+        
+        ptr_info_block = NS(Blocks_add_block)( blocks, NS(BLOCK_TYPE_PARTICLE), 
+                sizeof( particles ), &particles, NUM_ATTR_DATA_POINTERS, 
+                data_attr_offsets, data_attr_sizes, data_attr_counts );
+        
+        if( ptr_info_block != 0 )
+        {
+            ptr_particles = ( SIXTRL_GLOBAL_DEC NS(ParticlesSpecial)*                     
+                )NS(BlockInfo_get_const_ptr_begin)( ptr_info_block );
+        }
+    }
+    
+    return ptr_particles;
+}
 
 
 
@@ -374,13 +442,6 @@ int main()
 ///    cl::Buffer C(context, CL_MEM_READ_WRITE, sizeof(copied_beam_elements) ); // a separate container
 
     
-    st_Blocks particles;    
-    st_Blocks_preset( &particles );
-   
-    // assuming the same number of particles as the number of beam elements 
-    ret = st_Blocks_init( &particles, MAX_NUM_BEAM_ELEMENTS, 
-                              BEAM_ELEMENTS_DATA_CAPACITY );
-
     //TODO: populating the particles struct for each of the particles
    //       (Not clear how to do it)
    // Send this to the kernel unserialize as well
@@ -388,12 +449,13 @@ int main()
    st_Blocks_preset( &particles_buffer ); 
    st_block_size_t const NUM_BLOCKS = 2u; // taken from test_particles.cpp ??
    st_block_num_elements_t const NUM_PARTICLES = ( st_block_num_elements_t )1000u;
-   st_block_size_t const PARTICLES_DATA_CAPACITY =1048576u
-   int ret = st_Blocks_init(&particles_buffer, NUM_BLOCKS, PARTICLES_DATA_CAPACITY);
+   st_block_size_t const PARTICLES_DATA_CAPACITY =1048576u;
+   ret = st_Blocks_init(&particles_buffer, NUM_BLOCKS, PARTICLES_DATA_CAPACITY);
    assert(ret == 0); 
    st_Particles* particles = st_Blocks_add_particles(&particles_buffer, NUM_PARTICLES );
    
-
+   /* This gets rid of the "unused variable" warning/error until you actually use particles */
+   ( void )particles;
 
 
     int numThreads = 1;
