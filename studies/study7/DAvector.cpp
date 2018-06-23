@@ -13,7 +13,7 @@ class DAvec_6_1{
         DAvec_6_1(double values[])
         {
             for(int i=0;i<7;i++)
-                val[i] = values[i];            
+                val[i] = values[i];
         }
         DAvec_6_1 inv();
         DAvec_6_1 operator+(const DAvec_6_1& obj);
@@ -156,15 +156,15 @@ using namespace std;
 int main()
 {
     double arr[]={2.07345,0,0,0,0,0,0}, arr1[]={0.02,0,0,0,0,0,0}, arr2[]={0.01,0,0,0,0,0,0},arr3[]={1,0,0,0,0,0,0};
-    
+
     DAvec_6_1 angle(arr),sin_ang,cos_ang;
     sin_ang = sin(angle);
     cos_ang = cos(angle);
-    
+
     int datai[] = {0, 1, 0, 4, 4, 2, 3, 9, 2, 9, 2, 4, 14, 3, 14, 3, 5, 0, 10, 1};
-	DAvec_6_1 dataf[] = {angle,sin_ang,cos_ang,DAvec_6_1(arr1),DAvec_6_1(arr2)};
+    DAvec_6_1 dataf[] = {angle,sin_ang,cos_ang,DAvec_6_1(arr1),DAvec_6_1(arr2)};
     DAvec_6_1 coord[] = {DAvec_6_1(arr3),DAvec_6_1(arr3)};
-    
+
     map_rot2d(dataf,datai,0,coord);
     return 0;
 }
