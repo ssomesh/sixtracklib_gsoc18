@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "sixtracklib/_impl/definitions.h"
+#include "sixtracklib/_impl/path.h" // for NS(PATH_TO_BASE_DIR)
 #include "sixtracklib/common/blocks.h"
 #include "sixtracklib/common/beam_elements.h"
 #include "sixtracklib/common/particles.h"
@@ -145,10 +146,15 @@ static const char source[] =
 "#else\n"
 "# error double precision is not supported\n"
 "#endif\n"
-//"#include \"../external/include/sixtracklib/_impl/definitions.h\"\n"
-//"#include \"../external/include/sixtracklib/common/blocks.h\"\n"
-//"#include \"../external/include/sixtracklib/common/beam_elements.h\"\n"
-//"#include \"../external/include/sixtracklib/common/particles.h\"\n"
+"#include \"sixtracklib/_impl/namespace_begin.h\"\n"
+"#include \"sixtracklib/_impl/definitions.h\"\n"
+"#include \"sixtracklib/common/blocks.h\"\n"
+"#include \"sixtracklib/common/impl/particles_type.h\"\n"
+"#include \"sixtracklib/common/impl/particles_api.h\"\n"
+"#include \"sixtracklib/common/particles.h\"\n"
+"#include \"sixtracklib/common/impl/beam_elements_type.h\"\n"
+"#include \"sixtracklib/common/impl/beam_elements_api.h\"\n"
+"#include \"sixtracklib/common/beam_elements.h\"\n"
 "kernel void unserialize(\n"
 //"       ulong n,\n"
 "       global uchar *copy_buffer\n" // uint8_t is uchar
@@ -160,61 +166,119 @@ static const char source[] =
 //"    printf(\"Hello from GPU\");\n"
 "    NS(Blocks) copied_beam_elements;\n"
 "    NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);\n"
-"}\n"
 
+"    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = \n"
+"        st_Blocks_get_const_block_infos_begin( &copied_beam_elements );\n"
+"   SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =\n"
+"        st_Blocks_get_const_block_infos_end( &copied_beam_elements );\n"
+//"   st_BlockInfo const info = *belem_it;\n"
+//"         NS(BlockType) const type_id = (NS(BlockType)) st_BlockInfo_get_type_id(&info );\n"
 
-"kernel void track_drift_particle(\n" // a parallel version of Track_drift_particle from track.h
-//"       ulong n,\n"
-"       global uchar *particles_buffer\n" // for the particles
-//"       global NS(Blocks) copied_beam_elements\n" // uint8_t is uchar
-//"       global double *c\n"
-"       )\n"
-"{\n"
-"    size_t gid = get_global_id(0);\n" // element id
-"      auto const type_id = st_BlockInfo_get_type_id( gid );\n"
-      
+"#if 1\n"
+"    for( ; belem_it != belem_end ; ++belem_it )\n"
+"    {\n"
+//"        std::cout << std::setw( 6 ) << ii << \" | type: \";\n"
+"        st_Blocks_get_const_block_infos_end( &copied_beam_elements );\n"
+"   st_BlockInfo const info = *belem_it;\n"
+"         NS(BlockType) const type_id = (NS(BlockType)) st_BlockInfo_get_type_id(&info );\n"
 "        switch( type_id )\n"
 "        {\n"
 "            case st_BLOCK_TYPE_DRIFT:\n"
 "            {\n"
-"                st_Drift const* drift = \n"
-"                    st_Blocks_get_const_drift( gid );\n"
-"                    double const rpp = 1;\n" // keeping rpp constant 
-"                    double const px = 1;\n" // keeping px constant 
-"                    double const py = 1;\n" // keeping py constant 
-"                    double const dsigma = 1.0f - NS(Particles_get_rvv_value)(particles, gid) * (1.0f + 0.5f * (px * px + py *py));\n" 
-"    double sigma = NS(Particles_get_sigma_value)( particles, gid );\n"
-"    double s     = NS(Particles_get_s_value)( particles, gid );\n"
-"    double x     = NS(Particles_get_x_value)( particles, gid );\n"
-"    double y     = NS(Particles_get_y_value)( particles, gid );\n"
-    
-"    sigma += length * dsigma;\n"
-"    s     += length;\n"
-"    x     += length * px;\n"
-"    y     += length * py;\n"
-    
-"    NS(Particles_set_s_value)( particles, gid, s );\n"
-"    NS(Particles_set_x_value)( particles, gid, x );\n"
-"    NS(Particles_set_y_value)( particles, gid, y );\n"
-"    NS(Particles_set_sigma_value)( particles, gid, sigma );\n"
-                            
+"                __global st_Drift const* drift = \n"
+"                    st_Blocks_get_const_drift( &info );\n"
+"       st_Drift const drift_private = *drift;"
+"       printf( \"type: drift | length =  \");\n"
+"       printf( \"%f\\n\",st_Drift_get_length( &drift_private ));\n"
+//"                std::cout << \"drift        | length = \"\n"
+//"                          << std::setw( 10 ) \n"
+//"                          << st_Drift_get_length( drift )\n"
+//"                          << \" [m] \\r\\n\";\n"
+"                            \n"
 "                break;\n"
 "            }\n"
-            
+"            \n"
 "            case st_BLOCK_TYPE_DRIFT_EXACT:\n"
 "            {\n"
-"                st_DriftExact const* drift_exact =\n"
-"                    st_Blocks_get_const_drift_exact( gid );\n"
+"                __global st_DriftExact const* drift_exact =\n"
+"                    st_Blocks_get_const_drift_exact( &info );\n"
+"                \n"
+"       st_Drift const drift_exact_private = *drift_exact;"
+"       printf( \"type: drift_exact | length =  \");\n"
+"       printf( \"%f\\n\",st_DriftExact_get_length( &drift_exact_private ));\n"
+//"                std::cout << \"drift_exact  | length = \"\n"
+//"                          << std::setw( 10 )\n"
+//"                          << st_DriftExact_get_length( drift_exact )\n"
+//"                          << \" [m] \\r\\n\";\n"
+"                          \n"
 "                break;\n"
 "            }\n"
-            
+"            \n"
 "            default:\n"
 "            {\n"
-"                printf( \"unknown     | --> skipping\r\n\");\n"
+//"                std::cout << \"unknown     | --> skipping\\r\\n\";\n"
+"                  printf(\"Bye!\\n\");\n"
 "            }\n"
 "        };\n"
-
+"    }\n"
+"    \n"
+//"    std::cout.flush();\n"
+"#endif\n"
 "}\n";
+
+
+//"kernel void track_drift_particle(\n" // a parallel version of Track_drift_particle from track.h
+////"       ulong n,\n"
+//"       global uchar *particles_buffer\n" // for the particles
+////"       global NS(Blocks) copied_beam_elements\n" // uint8_t is uchar
+////"       global double *c\n"
+//"       )\n"
+//"{\n"
+//"    size_t gid = get_global_id(0);\n" // element id
+//"      auto const type_id = st_BlockInfo_get_type_id( gid );\n"
+//      
+//"        switch( type_id )\n"
+//"        {\n"
+//"            case st_BLOCK_TYPE_DRIFT:\n"
+//"            {\n"
+//"                st_Drift const* drift = \n"
+//"                    st_Blocks_get_const_drift( gid );\n"
+//"                    double const rpp = 1;\n" // keeping rpp constant 
+//"                    double const px = 1;\n" // keeping px constant 
+//"                    double const py = 1;\n" // keeping py constant 
+//"                    double const dsigma = 1.0f - NS(Particles_get_rvv_value)(particles, gid) * (1.0f + 0.5f * (px * px + py *py));\n" 
+//"    double sigma = NS(Particles_get_sigma_value)( particles, gid );\n"
+//"    double s     = NS(Particles_get_s_value)( particles, gid );\n"
+//"    double x     = NS(Particles_get_x_value)( particles, gid );\n"
+//"    double y     = NS(Particles_get_y_value)( particles, gid );\n"
+//    
+//"    sigma += length * dsigma;\n"
+//"    s     += length;\n"
+//"    x     += length * px;\n"
+//"    y     += length * py;\n"
+//    
+//"    NS(Particles_set_s_value)( particles, gid, s );\n"
+//"    NS(Particles_set_x_value)( particles, gid, x );\n"
+//"    NS(Particles_set_y_value)( particles, gid, y );\n"
+//"    NS(Particles_set_sigma_value)( particles, gid, sigma );\n"
+//                            
+//"                break;\n"
+//"            }\n"
+//            
+//"            case st_BLOCK_TYPE_DRIFT_EXACT:\n"
+//"            {\n"
+//"                st_DriftExact const* drift_exact =\n"
+//"                    st_Blocks_get_const_drift_exact( gid );\n"
+//"                break;\n"
+//"            }\n"
+//            
+//"            default:\n"
+//"            {\n"
+//"                printf( \"unknown     | --> skipping\r\n\");\n"
+//"            }\n"
+//"        };\n"
+//
+//"}\n";
 int main()
 {
     /* We will use 9+ beam element blocks in this example and do not 
@@ -414,7 +478,10 @@ int main()
         ));
 
     try {
-    program.build(devices);
+    std::string incls = "-D_GPUCODE=1 -D__NAMESPACE=st_ -I" + std::string(NS(PATH_TO_BASE_DIR)) + "include/";
+    std::cout << "Path = " << incls << std::endl;
+    //program.build(devices, "-D_GPUCODE=1 -D__NAMESPACE=st_ -I/home/sosingh/sixtracklib_gsoc18/initial_test/sixtrack-v0/external/include");
+    program.build(devices, incls.c_str());
     } catch (const cl::Error&) {
     std::cerr
       << "OpenCL compilation error" << std::endl
@@ -437,32 +504,31 @@ int main()
 //
 //    /* Now reconstruct the copied data into a different st_Blocks container */
 //    
-    st_Blocks copied_beam_elements;
-    st_Blocks_preset( &copied_beam_elements );
-///    cl::Buffer C(context, CL_MEM_READ_WRITE, sizeof(copied_beam_elements) ); // a separate container
-
-    
-    //TODO: populating the particles struct for each of the particles
-   //       (Not clear how to do it)
-   // Send this to the kernel unserialize as well
-   st_Blocks particles_buffer;
-   st_Blocks_preset( &particles_buffer ); 
-   st_block_size_t const NUM_BLOCKS = 2u; // taken from test_particles.cpp ??
-   st_block_num_elements_t const NUM_PARTICLES = ( st_block_num_elements_t )1000u;
-   st_block_size_t const PARTICLES_DATA_CAPACITY =1048576u;
-   ret = st_Blocks_init(&particles_buffer, NUM_BLOCKS, PARTICLES_DATA_CAPACITY);
-   assert(ret == 0); 
-   st_Particles* particles = st_Blocks_add_particles(&particles_buffer, NUM_PARTICLES );
-   
-   /* This gets rid of the "unused variable" warning/error until you actually use particles */
-   ( void )particles;
+//    st_Blocks copied_beam_elements;
+//    st_Blocks_preset( &copied_beam_elements );
+/////    cl::Buffer C(context, CL_MEM_READ_WRITE, sizeof(copied_beam_elements) ); // a separate container
+//
+//    
+//    //TODO: populating the particles struct for each of the particles
+//   //       (Not clear how to do it)
+//   // Send this to the kernel unserialize as well
+//   st_Blocks particles_buffer;
+//   st_Blocks_preset( &particles_buffer ); 
+//   st_block_size_t const NUM_BLOCKS = 2u; // taken from test_particles.cpp ??
+//   st_block_num_elements_t const NUM_PARTICLES = ( st_block_num_elements_t )1000u;
+//   st_block_size_t const PARTICLES_DATA_CAPACITY =1048576u;
+//   ret = st_Blocks_init(&particles_buffer, NUM_BLOCKS, PARTICLES_DATA_CAPACITY);
+//   assert(ret == 0); 
+//   st_Particles* particles = st_Blocks_add_particles(&particles_buffer, NUM_PARTICLES );
+//   
+//   /* This gets rid of the "unused variable" warning/error until you actually use particles */
+//   ( void )particles;
 
 
     int numThreads = 1;
     int blockSize = 1;
     cl::Kernel unserialize(program, "unserialize");
     unserialize.setArg(0,B);
-//    unserialize.setArg(1,C);
     queue.enqueueNDRangeKernel( 
     unserialize, cl::NullRange, cl::NDRange( numThreads ), 
     cl::NDRange(blockSize ));
@@ -471,15 +537,15 @@ int main()
 
     // Assuming the particles block and beam_elements block are unserialized on the GPU, we enqueue the kernel track_drift_particle
 
-    cl::Kernel track_drift_particle(program, "track_drift_particle");
-    numThreads = NUM_OF_BEAM_ELEMENTS; // assign one thread to each bean element
-    blockSize =track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( devices[ndev]); 
-//    track_drift_particle.setArg(0,B);
-//    track_drift_particle.setArg(1,D);
-    queue.enqueueNDRangeKernel( 
-    track_drift_particle, cl::NullRange, cl::NDRange( numThreads ), 
-    cl::NDRange(blockSize ));
-    queue.flush();
+//    cl::Kernel track_drift_particle(program, "track_drift_particle");
+//    numThreads = NUM_OF_BEAM_ELEMENTS; // assign one thread to each bean element
+//    blockSize =track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( devices[ndev]); 
+////    track_drift_particle.setArg(0,B);
+////    track_drift_particle.setArg(1,D);
+//    queue.enqueueNDRangeKernel( 
+//    track_drift_particle, cl::NullRange, cl::NDRange( numThreads ), 
+//    cl::NDRange(blockSize ));
+//    queue.flush();
     
 
     
