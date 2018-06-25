@@ -203,7 +203,7 @@ static const char source[] =
 "                __global st_DriftExact const* drift_exact =\n"
 "                    st_Blocks_get_const_drift_exact( &info );\n"
 "                \n"
-"       st_Drift const drift_exact_private = *drift_exact;"
+"       st_DriftExact const drift_exact_private = *drift_exact;"
 "       printf( \"type: drift_exact | length =  \");\n"
 "       printf( \"%f\\n\",st_DriftExact_get_length( &drift_exact_private ));\n"
 //"                std::cout << \"drift_exact  | length = \"\n"
