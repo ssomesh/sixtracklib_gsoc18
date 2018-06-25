@@ -163,7 +163,7 @@ static const char source[] =
 "       )\n"
 "{\n"
 "    size_t gid = get_global_id(0);\n"
-//"    printf(\"Hello from GPU\");\n"
+"    printf(\"Hello from GPU\\n\");\n"
 "    NS(Blocks) copied_beam_elements;\n"
 "    NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);\n"
 
@@ -174,13 +174,13 @@ static const char source[] =
 //"   st_BlockInfo const info = *belem_it;\n"
 //"         NS(BlockType) const type_id = (NS(BlockType)) st_BlockInfo_get_type_id(&info );\n"
 
-"#if 1\n"
 "    for( ; belem_it != belem_end ; ++belem_it )\n"
 "    {\n"
+"    printf(\"Hello from GPU\\n\");\n"
 //"        std::cout << std::setw( 6 ) << ii << \" | type: \";\n"
 "        st_Blocks_get_const_block_infos_end( &copied_beam_elements );\n"
 "   st_BlockInfo const info = *belem_it;\n"
-"         NS(BlockType) const type_id = (NS(BlockType)) st_BlockInfo_get_type_id(&info );\n"
+"         NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );\n"
 "        switch( type_id )\n"
 "        {\n"
 "            case st_BLOCK_TYPE_DRIFT:\n"
@@ -221,9 +221,7 @@ static const char source[] =
 "            }\n"
 "        };\n"
 "    }\n"
-"    \n"
 //"    std::cout.flush();\n"
-"#endif\n"
 "}\n";
 
 
