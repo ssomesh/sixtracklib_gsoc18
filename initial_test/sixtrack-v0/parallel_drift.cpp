@@ -524,10 +524,10 @@ int main()
 
 
   // Allocate device buffers and transfer input data to device.
-  cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-      copy_buffer.size() * sizeof(uint8_t), copy_buffer.data()); // input vector
-//    cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input vector
-//    queue.enqueueWriteBuffer( B, CL_TRUE, 0, copy_buffer.size() * sizeof(uint8_t), copy_buffer.data() )    ;
+//  cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+//      copy_buffer.size() * sizeof(uint8_t), copy_buffer.data()); // input vector
+    cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input vector
+    queue.enqueueWriteBuffer( B, CL_TRUE, 0, copy_buffer.size() * sizeof(uint8_t), copy_buffer.data() )    ;
     int numThreads = 1;
     int blockSize = 1;
     cl::Kernel unserialize(program, "unserialize");
