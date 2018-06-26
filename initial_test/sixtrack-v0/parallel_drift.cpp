@@ -465,8 +465,6 @@ int main()
     /* this is a completly different buffer, but it contains the same data: */
     
 
-    // Allocate device buffers and transfer input data to device.
-    cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input vector
     // launch a kernel with 1 thread and pass the copy_buffer 
     // and call st_Blocks_unserialize on it
 
@@ -525,6 +523,11 @@ int main()
 //   ( void )particles;
 
 
+  // Allocate device buffers and transfer input data to device.
+  cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
+      copy_buffer.size() * sizeof(uint8_t), copy_buffer.data()); // input vector
+//    cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input vector
+//    queue.enqueueWriteBuffer( B, CL_TRUE, 0, copy_buffer.size() * sizeof(uint8_t), copy_buffer.data() )    ;
     int numThreads = 1;
     int blockSize = 1;
     cl::Kernel unserialize(program, "unserialize");
