@@ -165,6 +165,7 @@ static const char source[] =
 "    size_t gid = get_global_id(0);\n"
 //"    printf(\"Hello from GPU\\n\");\n"
 "    NS(Blocks) copied_beam_elements;\n"
+"    NS(Blocks_preset)( &copied_beam_elements );\n" // very important for initialization
 "    int ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);\n"
 "     printf(\"ret = %d\\n\",ret);\n"
 
@@ -175,10 +176,9 @@ static const char source[] =
 //"   st_BlockInfo const info = *belem_it;\n"
 //"         NS(BlockType) const type_id = (NS(BlockType)) st_BlockInfo_get_type_id(&info );\n"
 
-"     printf(\"%u %u\",(uintptr_t)belem_it,(uintptr_t)belem_end);\n"
+//"     printf(\"%u %u\",(uintptr_t)belem_it,(uintptr_t)belem_end);\n"
 "    for( ; belem_it != belem_end ; ++belem_it )\n"
 "    {\n"
-"    printf(\"Hello from GPU -- before the 'for' loop\\n\");\n"
 //"        std::cout << std::setw( 6 ) << ii << \" | type: \";\n"
 "        st_Blocks_get_const_block_infos_end( &copied_beam_elements );\n"
 "   st_BlockInfo const info = *belem_it;\n"
