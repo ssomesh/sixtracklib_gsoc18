@@ -555,6 +555,83 @@ int main()
     
 
 
+      // creating a buffer to transfer the data from GPU to CPU
+
+      std::vector< uint8_t > copy_buffer_host(copy_buffer.size());  // output vector
+
+//      cl::Buffer C(context, CL_MEM_READ_WRITE,
+//      copy_buffer_host.size() * sizeof(uint8_t) );
+
+      
+      queue.enqueueReadBuffer(B, CL_TRUE, 0, copy_buffer_host.size() * sizeof(uint8_t), copy_buffer_host.data());
+      queue.flush();
+
+      NS(Blocks) copied_beam_elements_host;
+      NS(Blocks_preset)(&copied_beam_elements_host);
+      ret = st_Blocks_unserialize( &copied_beam_elements_host, copy_buffer_host.data() );
+    
+    assert( st_Blocks_get_const_data_begin( &copied_beam_elements_host ) ==
+            copy_buffer_host.data() );
+    
+    assert( st_Blocks_get_num_of_blocks( &copied_beam_elements_host ) ==
+            st_Blocks_get_num_of_blocks( &beam_elements ) );
+    
+    /* Iterate over the copy -> we expect it to have the same data as before */
+    
+    st_BlockInfo const* copy_it_host  = 
+        st_Blocks_get_const_block_infos_begin( &copied_beam_elements_host );
+        
+    st_BlockInfo const* copy_end_host =
+        st_Blocks_get_const_block_infos_end( &copied_beam_elements_host );
+        
+    std::cout << "\r\n"
+              << "Print the beam_elements copied to host: \r\n"
+              << "\r\n";
+        
+    for( ii = 0 ; copy_it_host != copy_end_host ; ++copy_it_host, ++ii )
+    {
+        std::cout << std::setw( 6 ) << ii << " | type: ";
+        
+        auto const type_id_host = st_BlockInfo_get_type_id( copy_it_host );
+        
+        switch( type_id_host )
+        {
+            case st_BLOCK_TYPE_DRIFT:
+            {
+                st_Drift const* drift = 
+                    st_Blocks_get_const_drift( copy_it_host );
+                
+                std::cout << "drift        | length = "
+                          << std::setw( 10 ) 
+                          << st_Drift_get_length( drift )
+                          << " [m] \r\n";
+                            
+                break;
+            }
+            
+            case st_BLOCK_TYPE_DRIFT_EXACT:
+            {
+                st_DriftExact const* drift_exact =
+                    st_Blocks_get_const_drift_exact( copy_it_host );
+                
+                std::cout << "drift_exact  | length = "
+                          << std::setw( 10 )
+                          << st_DriftExact_get_length( drift_exact )
+                          << " [m] \r\n";
+                          
+                break;
+            }
+            
+            default:
+            {
+                std::cout << "unknown     | --> skipping\r\n";
+            }
+        };
+    }
+    
+    std::cout << "\r\n\r\n"
+              << "Finished successfully!" << std::endl;
+
 //    
 //    ret = st_Blocks_unserialize( &copied_beam_elements, copy_buffer.data() );
 //    
