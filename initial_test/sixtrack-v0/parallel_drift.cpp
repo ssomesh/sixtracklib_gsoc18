@@ -4,8 +4,8 @@
   2. copy data to  the GPU
   3. unserailize (remap) on the GPU -- use a kernel launched with 1 thread to do this
   4. launch a kernel to perform the computation in parallel on the GPU (this is the actual computation)
-  5. copy the result back to the cpu 
-  6. unserialize the result on the CPUs
+  5. copy the result back to the cpu -- done !
+  6. unserialize the result on the CPUs -- done !
 
   Done!
  // IMP: The idea is to pass the memory (i.e. the serialzed array of type unsigned char) to the kernel and to reconstruct the NS(Blocks) instance then from there.
@@ -21,6 +21,7 @@
 #include <iostream>
 #include <stdio.h>
 #include <iomanip>
+#include <random>
 #include <vector>
 
 #include "sixtracklib/_impl/definitions.h"
@@ -31,6 +32,8 @@
 
 #define __CL_ENABLE_EXCEPTIONS
 #include <CL/cl.hpp>
+
+#if 0
 
 typedef struct NS(ParticlesSpecial)
 {
@@ -136,7 +139,7 @@ NS(ParticlesSpecial)* NS(Blocks_add_particles_special)(
     return ptr_particles;
 }
 
-
+#endif
 
 static const char source[] =
 "#if defined(cl_khr_fp64)\n"
@@ -180,7 +183,6 @@ static const char source[] =
 "    for( ; belem_it != belem_end ; ++belem_it )\n"
 "    {\n"
 //"        std::cout << std::setw( 6 ) << ii << \" | type: \";\n"
-"        st_Blocks_get_const_block_infos_end( &copied_beam_elements );\n"
 "   st_BlockInfo const info = *belem_it;\n"
 "         NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );\n"
 "        switch( type_id )\n"
@@ -224,7 +226,46 @@ static const char source[] =
 "        };\n"
 "    }\n"
 //"    std::cout.flush();\n"
-"}\n";
+"}\n\n"
+
+
+"kernel void unserialize_particle(\n"
+"       global uchar *copy_buffer_particles,\n" // uint8_t is uchar
+"       ulong NUM_PARTICLES\n"
+"       )\n"
+"{\n"
+"    size_t gid = get_global_id(0);\n"
+//"    printf(\"Bye!\\n\");\n"
+"     NS(Blocks) copied_particles_buffer;\n"
+"     NS(Blocks_preset) (&copied_particles_buffer);\n"
+
+"     int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);\n"
+"     printf(\"ret = %d\\n\",ret);\n"
+"    SIXTRL_GLOBAL_DEC st_BlockInfo const* it  = \n"
+"        st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );\n"
+    
+"    SIXTRL_GLOBAL_DEC st_BlockInfo const* end = \n"
+"        st_Blocks_get_const_block_infos_end( &copied_particles_buffer );\n"
+"    printf(\"NUM_PARTICLES = %u\\n\",NUM_PARTICLES );\n"    
+"    for( ; it != end ; ++it )\n"
+"    {\n"
+"     SIXTRL_GLOBAL_DEC NS(Particles) const* particles = \n"
+"            ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin;\n"
+"     for(st_block_size_t ii=0; ii < NUM_PARTICLES; ++ii )\n"
+"     {\n"
+"       printf(\"ii   = %6d\",ii);\n"
+"       printf(\" | s = %6.4f\",particles->s[ii]);\n"
+"       printf(\" | x = %6.4f\",particles->x[ii]);\n"
+"       printf(\" | y = %6.4f\",particles->y[ii]);\n"
+"       printf(\" | px = %6.4f\",particles->px[ii]);\n"
+"       printf(\" | py = %6.4f\",particles->py[ii]);\n"
+"       printf(\" | sigma = %6.4f\",particles->sigma[ii]);\n"
+"       printf(\" | rpp = %6.4f\",particles->rpp[ii]);\n"
+"       printf(\" | rvv = %6.4f\",particles->rvv[ii]);\n"
+"       printf(\"\\n\");\n"
+"    }\n"
+"   }\n"
+"}\n\n";
 
 
 //"kernel void track_drift_particle(\n" // a parallel version of Track_drift_particle from track.h
@@ -712,6 +753,146 @@ int main()
 //    st_Blocks_free( &copied_beam_elements );
 //    
 //    std::cout.flush();
+
+   ////////////////////////// Particles //////////////////////////////// 
+    st_block_size_t const NUM_PARTICLE_BLOCKS     = 1u;
+    st_block_size_t const PARTICLES_DATA_CAPACITY = 1048576u;
+    st_block_size_t const NUM_PARTICLES           = 100u;
+    
+    st_Blocks particles_buffer;
+    st_Blocks_preset( &particles_buffer );
+    
+    ret = st_Blocks_init( 
+        &particles_buffer, NUM_PARTICLE_BLOCKS, PARTICLES_DATA_CAPACITY );
+    
+    assert( ret == 0 );
+    
+    st_Particles* particles = st_Blocks_add_particles( 
+        &particles_buffer, NUM_PARTICLES );
+    
+    if( particles != nullptr )
+    {
+        /* Just some random values assigned to the individual attributes
+         * of the acutal particles -> these values do not make any 
+         * sense physically, but should be safe for calculating maps ->
+         * please check with the map for drift whether they do not produce
+         * some NaN's at the sqrt or divisions by 0 though!*/
+        
+        std::mt19937_64  prng( 20180622 );
+        
+        std::uniform_real_distribution<> x_distribution(  0.05, 1.0 );
+        std::uniform_real_distribution<> y_distribution(  0.05, 1.0 );
+        std::uniform_real_distribution<> px_distribution( 0.05, 0.2 );
+        std::uniform_real_distribution<> py_distribution( 0.05, 0.2 );
+        std::uniform_real_distribution<> sigma_distribution( 0.01, 0.5 );
+        
+        assert( particles->s     != nullptr );
+        assert( particles->x     != nullptr );
+        assert( particles->y     != nullptr );
+        assert( particles->px    != nullptr );
+        assert( particles->py    != nullptr );
+        assert( particles->sigma != nullptr );
+        assert( particles->rpp   != nullptr );
+        assert( particles->rvv   != nullptr );
+        
+        assert( particles->num_of_particles == NUM_PARTICLES );
+        
+        for( st_block_size_t ii = 0 ; ii < NUM_PARTICLES ; ++ii )
+        {
+            particles->s[ ii ]     = 0.0;
+            particles->x[ ii ]     = x_distribution( prng );
+            particles->y[ ii ]     = y_distribution( prng );
+            particles->px[ ii ]    = px_distribution( prng );
+            particles->py[ ii ]    = py_distribution( prng );
+            particles->sigma[ ii ] = sigma_distribution( prng );
+            particles->rpp[ ii ]   = 1.0;
+            particles->rvv[ ii ]   = 1.0;
+        }
+    }
+    
+    ret = st_Blocks_serialize( &particles_buffer );
+    assert( ret == 0 );
+    
+    /* ===================================================================== */
+    /* Copy to other buffer to simulate working on the GPU */
+    std::cout << "On the GPU:\n"; 
+    
+    std::vector< uint8_t > copy_buffer_1( 
+        st_Blocks_get_const_data_begin( &particles_buffer ), 
+        st_Blocks_get_const_data_end( &particles_buffer ) );
+    
+    
+  // Allocate device buffers and transfer input data to device.
+
+    cl::Buffer C(context, CL_MEM_READ_WRITE, copy_buffer_1.size() * sizeof(uint8_t)); // input vector
+    queue.enqueueWriteBuffer( C, CL_TRUE, 0, copy_buffer_1.size() * sizeof(uint8_t), copy_buffer_1.data() )    ;
+
+
+    cl::Kernel unserialize_particle(program, "unserialize_particle");
+    unserialize_particle.setArg(0,C);
+    unserialize_particle.setArg(1,NUM_PARTICLES);
+    queue.enqueueNDRangeKernel( 
+    unserialize_particle, cl::NullRange, cl::NDRange( numThreads ), 
+    cl::NDRange(blockSize ));
+    queue.flush();
+    queue.finish();
+
+    
+      // creating a buffer to transfer the data from GPU to CPU
+
+      std::vector< uint8_t > copy_particles_buffer_host(copy_buffer_1.size());  // output vector
+    
+      queue.enqueueReadBuffer(C, CL_TRUE, 0, copy_particles_buffer_host.size() * sizeof(uint8_t), copy_particles_buffer_host.data());
+      queue.flush();
+
+    st_Blocks copy_particles_buffer;
+    st_Blocks_preset( &copy_particles_buffer );
+    
+    ret = st_Blocks_unserialize( &copy_particles_buffer, copy_particles_buffer_host.data() );
+    assert( ret == 0 );
+    
+#if 1
+    /* on the GPU, these pointers will have __global as a decorator */
+
+    // On the CPU after copying the data back from the GPU
+    std::cout << "\n On the Host, after copying from the GPU\n";
+    
+    SIXTRL_GLOBAL_DEC st_BlockInfo const* it  = 
+        st_Blocks_get_const_block_infos_begin( &copy_particles_buffer );
+    
+    SIXTRL_GLOBAL_DEC st_BlockInfo const* end =
+        st_Blocks_get_const_block_infos_end( &copy_particles_buffer );
+    
+    for( ; it != end ; ++it )
+    {
+        SIXTRL_GLOBAL_DEC st_Particles const* particles = 
+            ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin;
+            
+        std::cout.precision( 4 );
+        
+        for( st_block_size_t ii = 0 ; ii < NUM_PARTICLES ; ++ii )
+        {
+            std::cout << " ii    = " << std::setw( 6 ) << ii
+                      << std::fixed
+                      << " | s     = " << std::setw( 6 ) << particles->s[ ii ]
+                      << " | x     = " << std::setw( 6 ) << particles->x[ ii ]
+                      << " | y     = " << std::setw( 6 ) << particles->y[ ii ]
+                      << " | px    = " << std::setw( 6 ) << particles->px[ ii ]
+                      << " | py    = " << std::setw( 6 ) << particles->py[ ii ]
+                      << " | sigma = " << std::setw( 6 ) << particles->sigma[ ii ]
+                      << " | rpp   = " << std::setw( 6 ) << particles->rpp[ ii ]
+                      << " | rvv   = " << std::setw( 6 ) << particles->rvv[ ii ]
+                      << "\r\n";
+        }
+    }
+    
+    std::cout.flush();
+    
+    st_Blocks_free( &particles_buffer );
+    st_Blocks_free( &copy_particles_buffer );
+#endif
+
+
 
 
     return 0;
