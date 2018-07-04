@@ -235,19 +235,20 @@ static const char source[] =
 "       )\n"
 "{\n"
 "    size_t gid = get_global_id(0);\n"
-//"    printf(\"Bye!\\n\");\n"
 "     NS(Blocks) copied_particles_buffer;\n"
 "     NS(Blocks_preset) (&copied_particles_buffer);\n"
 
 "     int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);\n"
 "     printf(\"ret = %d\\n\",ret);\n"
-"    SIXTRL_GLOBAL_DEC st_BlockInfo const* it  = \n"
+"    SIXTRL_GLOBAL_DEC st_BlockInfo const* it  = \n" // is 'it' pointing to the set of outer particles? check.
 "        st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );\n"
     
 "    SIXTRL_GLOBAL_DEC st_BlockInfo const* end = \n"
 "        st_Blocks_get_const_block_infos_end( &copied_particles_buffer );\n"
+//"     printf(\"%u %u\",(uintptr_t)it,(uintptr_t)end);\n"
 "    printf(\"NUM_PARTICLES = %u\\n\",NUM_PARTICLES );\n"    
 "    for( ; it != end ; ++it )\n"
+//"     printf(\"Hello hello!\\n\");\n"
 "    {\n"
 "     SIXTRL_GLOBAL_DEC NS(Particles) const* particles = \n"
 "            ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin;\n"
@@ -265,8 +266,106 @@ static const char source[] =
 "       printf(\"\\n\");\n"
 "    }\n"
 "   }\n"
-"}\n\n";
+"}\n\n"
 
+"kernel void track_drift_particle(\n"
+"       global uchar *copy_buffer,\n" // uint8_t is uchar
+"       global uchar *copy_buffer_particles,\n" // uint8_t is uchar
+"       ulong NUM_PARTICLES\n"
+"       )\n"
+"{\n"
+"    size_t gid = get_global_id(0);\n"
+"    if(gid >= NUM_PARTICLES) return;\n"
+"    NS(block_num_elements_t) ii = gid;\n"
+//"    printf(\" | %d\",ii);\n"
+
+// For the particles
+"     NS(Blocks) copied_particles_buffer;\n"
+"     NS(Blocks_preset) (&copied_particles_buffer);\n"
+
+"     int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);\n"
+"     printf(\"ret = %d\\n\",ret);\n"
+"    SIXTRL_GLOBAL_DEC st_BlockInfo const* it  = \n" // is 'it' pointing to the outer particles? check.
+"        st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );\n"
+"     SIXTRL_GLOBAL_DEC NS(Particles) const* particles = \n"
+"            ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin;\n" 
+// *particles now points to the first 'outer' particle
+// @ Assuming only a single outer particle
+
+"       printf(\"ii   = %6d\",ii);\n"
+"       printf(\" | s = %6.4f\",particles->s[ii]);\n"
+"       printf(\" | x = %6.4f\",particles->x[ii]);\n"
+"       printf(\" | y = %6.4f\",particles->y[ii]);\n"
+"       printf(\" | px = %6.4f\",particles->px[ii]);\n"
+"       printf(\" | py = %6.4f\",particles->py[ii]);\n"
+"       printf(\" | sigma = %6.4f\",particles->sigma[ii]);\n"
+"       printf(\" | rpp = %6.4f\",particles->rpp[ii]);\n"
+"       printf(\" | rvv = %6.4f\",particles->rvv[ii]);\n"
+
+"#if 0\n"
+
+// for the beam element
+"    NS(Blocks) copied_beam_elements;\n"
+"    NS(Blocks_preset)( &copied_beam_elements );\n" // very important for initialization
+"    int ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);\n"
+"     printf(\"ret = %d\\n\",ret);\n"
+
+"    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = \n"
+"        st_Blocks_get_const_block_infos_begin( &copied_beam_elements );\n"
+"   SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =\n"
+"        st_Blocks_get_const_block_infos_end( &copied_beam_elements );\n"
+//"   st_BlockInfo const info = *belem_it;\n"
+//"         NS(BlockType) const type_id = (NS(BlockType)) st_BlockInfo_get_type_id(&info );\n"
+
+//"     printf(\"%u %u\",(uintptr_t)belem_it,(uintptr_t)belem_end);\n"
+"    for( ; belem_it != belem_end ; ++belem_it )\n"
+"    {\n"
+//"        std::cout << std::setw( 6 ) << ii << \" | type: \";\n"
+"   st_BlockInfo const info = *belem_it;\n"
+"         NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );\n"
+"        switch( type_id )\n"
+"        {\n"
+"            case st_BLOCK_TYPE_DRIFT:\n"
+"            {\n"
+"                __global st_Drift const* drift = \n"
+"                    st_Blocks_get_const_drift( &info );\n"
+"       st_Drift const drift_private = *drift;"
+"       printf( \"type: drift | length =  \");\n"
+"       printf( \"%f\\n\",st_Drift_get_length( &drift_private ));\n"
+//"                std::cout << \"drift        | length = \"\n"
+//"                          << std::setw( 10 ) \n"
+//"                          << st_Drift_get_length( drift )\n"
+//"                          << \" [m] \\r\\n\";\n"
+"                            \n"
+"                break;\n"
+"            }\n"
+"            \n"
+"            case st_BLOCK_TYPE_DRIFT_EXACT:\n"
+"            {\n"
+"                __global st_DriftExact const* drift_exact =\n"
+"                    st_Blocks_get_const_drift_exact( &info );\n"
+"                \n"
+"       st_DriftExact const drift_exact_private = *drift_exact;"
+"       printf( \"type: drift_exact | length =  \");\n"
+"       printf( \"%f\\n\",st_DriftExact_get_length( &drift_exact_private ));\n"
+//"                std::cout << \"drift_exact  | length = \"\n"
+//"                          << std::setw( 10 )\n"
+//"                          << st_DriftExact_get_length( drift_exact )\n"
+//"                          << \" [m] \\r\\n\";\n"
+"                          \n"
+"                break;\n"
+"            }\n"
+"            \n"
+"            default:\n"
+"            {\n"
+//"                std::cout << \"unknown     | --> skipping\\r\\n\";\n"
+"                  printf(\"Bye!\\n\");\n"
+"            }\n"
+"        };\n"
+"    }\n"
+"#endif\n"
+"      \n"
+"}\n";
 
 //"kernel void track_drift_particle(\n" // a parallel version of Track_drift_particle from track.h
 ////"       ulong n,\n"
@@ -892,8 +991,22 @@ int main()
     st_Blocks_free( &copy_particles_buffer );
 #endif
 
+// TODO: implement the Track_drift kernel
+//       The signature of it will contain something like: (global uchar copy_buffer, global uchar copy_particle_buffer)
+//       In the body of the kernel, unserialize the work-item private NS(Block) instance of Particles, beam_elements and then use these instances.
 
-
+    numThreads = 200;
+    blockSize = 100;
+    cl::Kernel track_drift_particle(program, "track_drift_particle");
+    track_drift_particle.setArg(0,B);
+    track_drift_particle.setArg(1,C);
+    track_drift_particle.setArg(2,NUM_PARTICLES);
+    queue.enqueueNDRangeKernel( 
+    track_drift_particle, cl::NullRange, cl::NDRange( numThreads ), 
+    cl::NDRange(blockSize ));
+    queue.flush();
+    queue.finish();
+    
 
     return 0;
 
