@@ -978,7 +978,7 @@ int main()
     /* on the GPU, these pointers will have __global as a decorator */
 
     // On the CPU after copying the data back from the GPU
-    std::cout << "\n On the Host, after copying from the GPU\n";
+    std::cout << "\n On the Host, after copying from the GPU; before applying the drift_track_particle mapping\n";
     
     SIXTRL_GLOBAL_DEC st_BlockInfo const* it  = 
         st_Blocks_get_const_block_infos_begin( &copy_particles_buffer );
@@ -1011,8 +1011,8 @@ int main()
     
     std::cout.flush();
     
-    st_Blocks_free( &particles_buffer );
-    st_Blocks_free( &copy_particles_buffer );
+//    st_Blocks_free( &particles_buffer );
+//    st_Blocks_free( &copy_particles_buffer );
 #endif
 
 // TODO: implement the Track_drift kernel
@@ -1030,8 +1030,55 @@ int main()
     cl::NDRange(blockSize ));
     queue.flush();
     queue.finish();
-    
 
+#if 1 
+      queue.enqueueReadBuffer(C, CL_TRUE, 0, copy_particles_buffer_host.size() * sizeof(uint8_t), copy_particles_buffer_host.data());
+      queue.flush();
+
+    //st_Blocks copy_particles_buffer;
+    st_Blocks_preset( &copy_particles_buffer );
+    
+    ret = st_Blocks_unserialize( &copy_particles_buffer, copy_particles_buffer_host.data() );
+    assert( ret == 0 );
+    
+    /* on the GPU, these pointers will have __global as a decorator */
+
+    // On the CPU after copying the data back from the GPU
+    std::cout << "\n On the Host, after applying the drift_track_particles mapping and copying from the GPU\n";
+    
+    SIXTRL_GLOBAL_DEC st_BlockInfo const* itr  = 
+        st_Blocks_get_const_block_infos_begin( &copy_particles_buffer );
+    
+    SIXTRL_GLOBAL_DEC st_BlockInfo const* endr =
+        st_Blocks_get_const_block_infos_end( &copy_particles_buffer );
+    
+    for( ; itr != endr ; ++itr )
+    {
+        SIXTRL_GLOBAL_DEC st_Particles const* particles = 
+            ( SIXTRL_GLOBAL_DEC st_Particles const* )itr->begin;
+            
+        std::cout.precision( 4 );
+        
+        for( st_block_size_t ii = 0 ; ii < NUM_PARTICLES ; ++ii )
+        {
+            std::cout << " ii    = " << std::setw( 6 ) << ii
+                      << std::fixed
+                      << " | s     = " << std::setw( 6 ) << particles->s[ ii ]
+                      << " | x     = " << std::setw( 6 ) << particles->x[ ii ]
+                      << " | y     = " << std::setw( 6 ) << particles->y[ ii ]
+                      << " | px    = " << std::setw( 6 ) << particles->px[ ii ]
+                      << " | py    = " << std::setw( 6 ) << particles->py[ ii ]
+                      << " | sigma = " << std::setw( 6 ) << particles->sigma[ ii ]
+                      << " | rpp   = " << std::setw( 6 ) << particles->rpp[ ii ]
+                      << " | rvv   = " << std::setw( 6 ) << particles->rvv[ ii ]
+                      << "\r\n";
+        }
+    }
+    
+    std::cout.flush();
+    st_Blocks_free( &particles_buffer );
+    st_Blocks_free( &copy_particles_buffer );
+#endif
     return 0;
 
   }
