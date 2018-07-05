@@ -284,31 +284,33 @@ static const char source[] =
 "     NS(Blocks_preset) (&copied_particles_buffer);\n"
 
 "     int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);\n"
-"     printf(\"ret = %d\\n\",ret);\n"
+//"     printf(\"ret = %d\\n\",ret);\n"
 "    SIXTRL_GLOBAL_DEC st_BlockInfo const* it  = \n" // is 'it' pointing to the outer particles? check.
 "        st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );\n"
 "     SIXTRL_GLOBAL_DEC NS(Particles) const* particles = \n"
 "            ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin;\n" 
 // *particles now points to the first 'outer' particle
 // @ Assuming only a single outer particle
+// each 'ii' refers to an inner particle
 
-"       printf(\"ii   = %6d\",ii);\n"
-"       printf(\" | s = %6.4f\",particles->s[ii]);\n"
-"       printf(\" | x = %6.4f\",particles->x[ii]);\n"
-"       printf(\" | y = %6.4f\",particles->y[ii]);\n"
-"       printf(\" | px = %6.4f\",particles->px[ii]);\n"
-"       printf(\" | py = %6.4f\",particles->py[ii]);\n"
-"       printf(\" | sigma = %6.4f\",particles->sigma[ii]);\n"
-"       printf(\" | rpp = %6.4f\",particles->rpp[ii]);\n"
-"       printf(\" | rvv = %6.4f\",particles->rvv[ii]);\n"
+//"       printf(\"ii   = %6d\",ii);\n"
+//"       printf(\" | s = %6.4f\",particles->s[ii]);\n"
+//"       printf(\" | x = %6.4f\",particles->x[ii]);\n"
+//"       printf(\" | y = %6.4f\",particles->y[ii]);\n"
+//"       printf(\" | px = %6.4f\",particles->px[ii]);\n"
+//"       printf(\" | py = %6.4f\",particles->py[ii]);\n"
+//"       printf(\" | sigma = %6.4f\",particles->sigma[ii]);\n"
+//"       printf(\" | rpp = %6.4f\",particles->rpp[ii]);\n"
+//"       printf(\" | rvv = %6.4f\",particles->rvv[ii]);\n"
+//
+//"         \n"
 
-"#if 0\n"
 
 // for the beam element
 "    NS(Blocks) copied_beam_elements;\n"
 "    NS(Blocks_preset)( &copied_beam_elements );\n" // very important for initialization
-"    int ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);\n"
-"     printf(\"ret = %d\\n\",ret);\n"
+"    ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);\n"
+//"    printf(\"ret = %d\\n\",ret);\n"
 
 "    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = \n"
 "        st_Blocks_get_const_block_infos_begin( &copied_beam_elements );\n"
@@ -317,7 +319,11 @@ static const char source[] =
 //"   st_BlockInfo const info = *belem_it;\n"
 //"         NS(BlockType) const type_id = (NS(BlockType)) st_BlockInfo_get_type_id(&info );\n"
 
+"    SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1;\n"
+"    SIXTRL_STATIC SIXTRL_REAL_T const ONE_HALF = ( SIXTRL_REAL_T )0.5L;\n"
 //"     printf(\"%u %u\",(uintptr_t)belem_it,(uintptr_t)belem_end);\n"
+
+// for each particle we apply the beam_elements, as applicable (decided by the switch case)
 "    for( ; belem_it != belem_end ; ++belem_it )\n"
 "    {\n"
 //"        std::cout << std::setw( 6 ) << ii << \" | type: \";\n"
@@ -330,8 +336,27 @@ static const char source[] =
 "                __global st_Drift const* drift = \n"
 "                    st_Blocks_get_const_drift( &info );\n"
 "       st_Drift const drift_private = *drift;"
-"       printf( \"type: drift | length =  \");\n"
-"       printf( \"%f\\n\",st_Drift_get_length( &drift_private ));\n"
+"          SIXTRL_REAL_T const length = st_Drift_get_length( &drift_private );  \n"
+"       SIXTRL_REAL_T const rpp = particles->rpp[ii]; \n"
+"       SIXTRL_REAL_T const px = particles->px[ii] * rpp; \n"
+"       SIXTRL_REAL_T const py = particles->py[ii] * rpp; \n"
+"       SIXTRL_REAL_T const dsigma = \n"
+"          ONE - particles->rvv[ii]  * ( ONE + ONE_HALF * ( px * px + py * py ) );\n"
+"       SIXTRL_REAL_T sigma = particles->sigma[ii];\n"
+"       SIXTRL_REAL_T s = particles->s[ii];\n"
+"       SIXTRL_REAL_T x = particles->x[ii];\n"
+"       SIXTRL_REAL_T y = particles->y[ii];\n"
+"           sigma += length * dsigma;\n"
+"           s     += length;\n"
+"           x     += length * px;\n"
+"           y     += length * py;\n"
+"       particles->s[ ii ] = s;\n"
+"       particles->x[ ii ] = x;\n"
+"       particles->y[ ii ] = y;\n"
+"       particles->sigma[ ii ] = sigma;\n"
+//"       printf( \"type: drift | length =  \");\n"
+//"       printf( \"%f\\n\",st_Drift_get_length( &drift_private ));\n"
+
 //"                std::cout << \"drift        | length = \"\n"
 //"                          << std::setw( 10 ) \n"
 //"                          << st_Drift_get_length( drift )\n"
@@ -346,8 +371,8 @@ static const char source[] =
 "                    st_Blocks_get_const_drift_exact( &info );\n"
 "                \n"
 "       st_DriftExact const drift_exact_private = *drift_exact;"
-"       printf( \"type: drift_exact | length =  \");\n"
-"       printf( \"%f\\n\",st_DriftExact_get_length( &drift_exact_private ));\n"
+//"       printf( \"type: drift_exact | length =  \");\n"
+//"       printf( \"%f\\n\",st_DriftExact_get_length( &drift_exact_private ));\n"
 //"                std::cout << \"drift_exact  | length = \"\n"
 //"                          << std::setw( 10 )\n"
 //"                          << st_DriftExact_get_length( drift_exact )\n"
@@ -363,7 +388,6 @@ static const char source[] =
 "            }\n"
 "        };\n"
 "    }\n"
-"#endif\n"
 "      \n"
 "}\n";
 
