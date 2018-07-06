@@ -358,7 +358,7 @@ int main()
 
 #if 0
 /////////////////////// Alternative 1 for including the kernels written in a separate file -- works perfectly fine /////////////////////////////////
-			cl:: Program program(context, "#include \"../kernels.cl\" ", false); // the path inside the #include should be relative to the folder from which make is called.. otherwise give the absolute path. 
+			cl:: Program program(context, "#include \"../kernels.cl\" ", false); // the path inside the #include should be relative to an include directory specified using -Ipath/to/dir specified via build options.. otherwise give the absolute path. 
 #endif
 
 #if 0
