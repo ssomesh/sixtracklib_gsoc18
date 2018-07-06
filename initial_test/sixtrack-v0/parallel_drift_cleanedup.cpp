@@ -867,12 +867,14 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 //       The signature of it will contain something like: (global uchar copy_buffer, global uchar copy_particle_buffer)
 //       In the body of the kernel, unserialize the work-item private NS(Block) instance of Particles, beam_elements and then use these instances.
 
+    SIXTRL_UINT64_T const NUM_TURNS = 10;  
     numThreads = 200;
     blockSize = 100;
     cl::Kernel track_drift_particle(program, "track_drift_particle");
     track_drift_particle.setArg(0,B);
     track_drift_particle.setArg(1,C);
     track_drift_particle.setArg(2,NUM_PARTICLES);
+    track_drift_particle.setArg(3,NUM_TURNS);
     queue.enqueueNDRangeKernel( 
     track_drift_particle, cl::NullRange, cl::NDRange( numThreads ), 
     cl::NDRange(blockSize ));
