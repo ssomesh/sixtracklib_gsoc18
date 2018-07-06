@@ -32,3 +32,14 @@ target_link_libraries( parallel_drift_cleanedup SixTracklib::sixtrack ${OpenCL_L
 set_property( TARGET parallel_drift_cleanedup PROPERTY CXX_STANDARD 11 )
 set_property( TARGET parallel_drift_cleanedup PROPERTY CXX_STANDARD_REQUIRED ON )
 set_property( TARGET parallel_drift_cleanedup PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic) 
+
+#-------------------------------------------------------------------
+#sequential drift_cpu
+
+add_executable( drift_cpu drift_cpu.cpp )
+target_link_libraries( drift_cpu SixTracklib::sixtrack )
+
+set_property( TARGET drift_cpu PROPERTY CXX_STANDARD 11 )
+set_property( TARGET drift_cpu PROPERTY CXX_STANDARD_REQUIRED ON )
+set_property( TARGET drift_cpu PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic )
+

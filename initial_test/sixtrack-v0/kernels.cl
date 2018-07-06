@@ -38,9 +38,8 @@ kernel void track_drift_particle(
                                  ulong NUM_TURNS // number of times a particle is mapped over each of the beam_elements
                                  )
 {
-  size_t gid = get_global_id(0);
-  if(gid >= NUM_PARTICLES) return;
-  NS(block_num_elements_t) ii = gid;
+  NS(block_num_elements_t) ii = get_global_id(0);
+  if(ii >= NUM_PARTICLES) return;
 
   /* For the particles */
   NS(Blocks) copied_particles_buffer;
@@ -48,9 +47,10 @@ kernel void track_drift_particle(
 
   int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);
   SIXTRL_GLOBAL_DEC st_BlockInfo const* it  =  // is 'it' pointing to the outer particles? check.
-  st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );
+        st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );
   SIXTRL_GLOBAL_DEC NS(Particles) const* particles = 
-  ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin; 
+        ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin; 
+
   // *particles now points to the first 'outer' particle
   // @ Assuming only a single outer particle
   // each 'ii' refers to an inner particle
@@ -61,9 +61,9 @@ kernel void track_drift_particle(
   ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);
 
   SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
-  st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
+      st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
   SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
-  st_Blocks_get_const_block_infos_end( &copied_beam_elements );
+      st_Blocks_get_const_block_infos_end( &copied_beam_elements );
 
   SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1;
   SIXTRL_STATIC SIXTRL_REAL_T const ONE_HALF = ( SIXTRL_REAL_T )0.5L;
