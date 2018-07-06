@@ -23,6 +23,8 @@
 #include <iomanip>
 #include <random>
 #include <vector>
+#include <iterator>
+#include <fstream>
 
 #include "sixtracklib/_impl/definitions.h"
 #include "sixtracklib/_impl/path.h" // for NS(PATH_TO_BASE_DIR)
@@ -141,6 +143,7 @@ NS(ParticlesSpecial)* NS(Blocks_add_particles_special)(
 
 #endif
 
+#if 0
 static const char source[] =
 "#if defined(cl_khr_fp64)\n"
 "#  pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
@@ -256,6 +259,7 @@ static const char source[] =
 "    }\n"
 "      \n"
 "}\n";
+#endif
 
 int main()
 {
@@ -446,12 +450,41 @@ int main()
     // launch a kernel with 1 thread and pass the copy_buffer 
     // and call st_Blocks_unserialize on it
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // getting the kernel file
+   std::string PATH_TO_KERNEL_FILE( st_PATH_TO_BASE_DIR );
+       PATH_TO_KERNEL_FILE += "../kernels.cl";
+
+       std::string kernel_source( "" );
+       std::ifstream kernel_file( PATH_TO_KERNEL_FILE.c_str(),
+                                  std::ios::in | std::ios::binary );
+
+       if( kernel_file.is_open() )
+       {
+           std::istreambuf_iterator< char > file_begin( kernel_file.rdbuf() );
+           std::istreambuf_iterator< char > end_of_file;
+
+           kernel_source.assign( file_begin, end_of_file );
+           kernel_file.close();
+       } 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
     int ndev = 0; // specifying the id of the device to be used
     cl::CommandQueue queue(context, devices[ndev]);
     // Compile OpenCL program for found devices.
-    cl::Program program(context, cl::Program::Sources(
-        1, std::make_pair(source, strlen(source))
-        ));
+			cl:: Program program(context, kernel_source); //string  kernel_source contains the kernel(s) read from the file
+
+#if 0
+/////////////////////// Alternative 1 for including the kernels written in a separate file -- works perfectly fine /////////////////////////////////
+			cl:: Program program(context, "#include \"../kernels.cl\" ", false); // the path inside the #include should be relative to the folder from which make is called.. otherwise give the absolute path. 
+#endif
+
+#if 0
+/////////////////////// The way to go if the string source[] contains the source.
+
+//    cl::Program program(context, cl::Program::Sources(
+//        1, std::make_pair(source, strlen(source))
+//        ));
+#endif
 
     try {
     std::string incls = "-D_GPUCODE=1 -D__NAMESPACE=st_ -I" + std::string(NS(PATH_TO_BASE_DIR)) + "include/";
