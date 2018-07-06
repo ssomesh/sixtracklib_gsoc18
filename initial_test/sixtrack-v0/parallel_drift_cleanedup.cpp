@@ -13,6 +13,7 @@
 
 */
 
+// The kernel file is "kernels.cl"
 
 #include <cassert>
 #include <cstdint>
@@ -440,9 +441,9 @@ int main()
      * data-range iterators pointing to the "data begin" and "data end" 
      * positions in the serialized buffer*/
     
-    std::vector< uint8_t > copy_buffer( 
-        st_Blocks_get_const_data_begin( &beam_elements ), 
-        st_Blocks_get_const_data_end( &beam_elements ) );
+//    std::vector< uint8_t > copy_buffer( 
+//        st_Blocks_get_const_data_begin( &beam_elements ), 
+//        st_Blocks_get_const_data_end( &beam_elements ) );
     
     /* this is a completly different buffer, but it contains the same data: */
     
@@ -479,7 +480,7 @@ int main()
 #endif
 
 #if 0
-/////////////////////// The way to go if the string source[] contains the source.
+/////////////////////// The way to go if the string source[] contains the source in the same file as this.
 
 //    cl::Program program(context, cl::Program::Sources(
 //        1, std::make_pair(source, strlen(source))
@@ -537,9 +538,8 @@ int main()
   // Allocate device buffers and transfer input data to device.
 //  cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
 //      copy_buffer.size() * sizeof(uint8_t), copy_buffer.data()); // input vector
-    cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input vector
-    queue.enqueueWriteBuffer( B, CL_TRUE, 0, copy_buffer.size() * sizeof(uint8_t), copy_buffer.data() )    ;
-
+    cl::Buffer B(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements  )); // input vector
+queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements ), st_Blocks_get_const_data_begin( &beam_elements ) );
 
 //    int numThreads = 1;
 //    int blockSize = 1;
@@ -790,15 +790,10 @@ int main()
     /* Copy to other buffer to simulate working on the GPU */
     std::cout << "On the GPU:\n"; 
     
-    std::vector< uint8_t > copy_buffer_1( 
-        st_Blocks_get_const_data_begin( &particles_buffer ), 
-        st_Blocks_get_const_data_end( &particles_buffer ) );
-    
-    
   // Allocate device buffers and transfer input data to device.
 
-    cl::Buffer C(context, CL_MEM_READ_WRITE, copy_buffer_1.size() * sizeof(uint8_t)); // input vector
-    queue.enqueueWriteBuffer( C, CL_TRUE, 0, copy_buffer_1.size() * sizeof(uint8_t), copy_buffer_1.data() )    ;
+    cl::Buffer C(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &particles_buffer )); // input vector
+		queue.enqueueWriteBuffer( C, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &particles_buffer ), st_Blocks_get_const_data_begin( &particles_buffer ) );
 
     int numThreads = 1;
     int blockSize = 1;
@@ -812,19 +807,11 @@ int main()
     queue.flush();
     queue.finish();
 
-//    cl::Kernel unserialize_particle(program, "unserialize_particle");
-//    unserialize_particle.setArg(0,C);
-//    unserialize_particle.setArg(1,NUM_PARTICLES);
-//    queue.enqueueNDRangeKernel( 
-//    unserialize_particle, cl::NullRange, cl::NDRange( numThreads ), 
-//    cl::NDRange(blockSize ));
-//    queue.flush();
-//    queue.finish();
 
     
       // creating a buffer to transfer the data from GPU to CPU
 
-      std::vector< uint8_t > copy_particles_buffer_host(copy_buffer_1.size());  // output vector
+      std::vector< uint8_t > copy_particles_buffer_host(st_Blocks_get_total_num_bytes( &particles_buffer )/sizeof(uint8_t));  // output vector
     
       queue.enqueueReadBuffer(C, CL_TRUE, 0, copy_particles_buffer_host.size() * sizeof(uint8_t), copy_particles_buffer_host.data());
       queue.flush();
