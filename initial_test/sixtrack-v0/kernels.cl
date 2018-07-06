@@ -60,17 +60,16 @@ kernel void track_drift_particle(
   NS(Blocks_preset)( &copied_beam_elements ); // very important for initialization
   ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);
 
-  SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
-      st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
-  SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
-      st_Blocks_get_const_block_infos_end( &copied_beam_elements );
-
   SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1;
   SIXTRL_STATIC SIXTRL_REAL_T const ONE_HALF = ( SIXTRL_REAL_T )0.5L;
 
   // for each particle we apply the beam_elements, as applicable (decided by the switch case)
 
   for (size_t nt=0; nt < NUM_TURNS; ++nt) {
+    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
+        st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
+    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
+        st_Blocks_get_const_block_infos_end( &copied_beam_elements );
 
 		for( ; belem_it != belem_end ; ++belem_it )
 				 {

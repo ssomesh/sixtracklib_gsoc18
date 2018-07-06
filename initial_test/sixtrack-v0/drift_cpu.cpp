@@ -15,7 +15,7 @@
 #include "sixtracklib/common/particles.h"
 
 
-  NS(Blocks) track_drift_particles(NS(Blocks) beam_elements, NS(Blocks) particles_buffer, NS(block_size_t) NUM_PARTICLES, NS(block_size_t) NUM_TURNS) {
+  void track_drift_particles(NS(Blocks)& beam_elements, NS(Blocks)& particles_buffer, NS(block_size_t) NUM_PARTICLES, NS(block_size_t) NUM_TURNS) {
 
   st_BlockInfo const* it  =  // is 'it' pointing to the outer particles? check.
         st_Blocks_get_const_block_infos_begin( &particles_buffer );
@@ -28,10 +28,6 @@
 
   /* for the beam element */
 
-  st_BlockInfo const* belem_it  = 
-      st_Blocks_get_const_block_infos_begin( &beam_elements );
-  st_BlockInfo const* belem_end =
-      st_Blocks_get_const_block_infos_end( &beam_elements );
 
   SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1;
   SIXTRL_STATIC SIXTRL_REAL_T const ONE_HALF = ( SIXTRL_REAL_T )0.5L;
@@ -41,6 +37,11 @@
 for (size_t ii=0; ii < NUM_PARTICLES; ++ii) {
 
   for (size_t nt=0; nt < NUM_TURNS; ++nt) {
+
+  st_BlockInfo const* belem_it  = 
+      st_Blocks_get_const_block_infos_begin( &beam_elements );
+  st_BlockInfo const* belem_end =
+      st_Blocks_get_const_block_infos_end( &beam_elements );
 
 		for( ; belem_it != belem_end ; ++belem_it )
 				 {
@@ -80,7 +81,7 @@ for (size_t ii=0; ii < NUM_PARTICLES; ++ii) {
 				 }
     }
   }
-  return particles_buffer;
+  //return particles_buffer;
 }
 
 int main()
@@ -305,19 +306,20 @@ int main()
     std::cout.flush();
 
     st_block_size_t NUM_TURNS = 10;
-    NS(Blocks) particles_buffer_copy;
-    NS(Blocks_preset) (&particles_buffer_copy);
-   particles_buffer_copy =  track_drift_particles(beam_elements, particles_buffer, NUM_PARTICLES, NUM_TURNS);
+   // NS(Blocks) particles_buffer_copy;
+//    NS(Blocks_preset) (&particles_buffer_copy);
+ // NS(Blocks) particles_buffer_copy =  
+  track_drift_particles(beam_elements, particles_buffer, NUM_PARTICLES, NUM_TURNS);
 
 
 // After applying the track_drift_particles map to  Particles
 std::cout << "After applying the track_drift_particles map to  Particles:" << std::endl;
 
     st_BlockInfo const* itr  = 
-        st_Blocks_get_const_block_infos_begin( &particles_buffer_copy );
+        st_Blocks_get_const_block_infos_begin( &particles_buffer );
     
      st_BlockInfo const* endr =
-        st_Blocks_get_const_block_infos_end( &particles_buffer_copy );
+        st_Blocks_get_const_block_infos_end( &particles_buffer );
     
     for( ; itr != endr ; ++itr )
     {
@@ -348,6 +350,6 @@ std::cout << "After applying the track_drift_particles map to  Particles:" << st
 
 
     st_Blocks_free( &particles_buffer );
-    st_Blocks_free( &particles_buffer_copy );
+//    st_Blocks_free( &particles_buffer_copy );
     return 0;
 }
