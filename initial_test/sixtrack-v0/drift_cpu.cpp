@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <iomanip>
 #include <random>
+#include <sys/time.h>
 #include <vector>
 
 #include "sixtracklib/_impl/definitions.h"
@@ -84,14 +85,24 @@ for (size_t ii=0; ii < NUM_PARTICLES; ++ii) {
   //return particles_buffer;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+      if(argc != 2) {
+          std::cerr << "Usage: " << argv[0] << " < #particles > " << std::endl;
+          exit(1);
+        }
+		  double rtclock();
+  		int NUM_REPETITIONS = 15;//1010; // for benchmarking
+    	double num_of_turns = 0.0; // for timing
+    	double average_time_cpu = 0.0;
+			
+			for(int ll = 0; ll < NUM_REPETITIONS; ++ll) {
     /* We will use 9+ beam element blocks in this example and do not 
      * care to be memory efficient yet; thus we make the blocks for 
      * beam elements and particles big enough to avoid running into problems */
     
-    constexpr st_block_size_t const MAX_NUM_BEAM_ELEMENTS       = 20u;
-    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 9u;
+    constexpr st_block_size_t const MAX_NUM_BEAM_ELEMENTS       = 1000u;//20u;
+    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 1000u;//;9u;
     
     /* 1MByte is plenty of space */
     constexpr st_block_size_t const BEAM_ELEMENTS_DATA_CAPACITY = 1048576u; 
@@ -157,6 +168,7 @@ int main()
      * st_Drift with the same length appear and one st_DriftExact with a 
      * different length should appear in the end */
     
+#if 0    
     std::cout << "\r\n"
               << "Print these newly created beam_elements: \r\n"
               << "\r\n";
@@ -211,14 +223,14 @@ int main()
             }
         };
     }
-    
+#endif 
     std::cout.flush();
 
    //////////////////// Particles //////////////////////////
 
     st_block_size_t const NUM_PARTICLE_BLOCKS     = 1u;
-    st_block_size_t const PARTICLES_DATA_CAPACITY = 1048576u;
-    st_block_size_t const NUM_PARTICLES           = 100u;
+    st_block_size_t const PARTICLES_DATA_CAPACITY = 1048576u*50;
+    st_block_size_t const NUM_PARTICLES           = atoi(argv[1]);// 25000u;
     
     st_Blocks particles_buffer;
     st_Blocks_preset( &particles_buffer );
@@ -256,7 +268,7 @@ int main()
         assert( particles->rpp   != nullptr );
         assert( particles->rvv   != nullptr );
         
-        assert( particles->num_of_particles == NUM_PARTICLES );
+        assert( particles->num_of_particles == (int)NUM_PARTICLES );
         
         for( st_block_size_t ii = 0 ; ii < NUM_PARTICLES ; ++ii )
         {
@@ -274,6 +286,11 @@ int main()
     ret = st_Blocks_serialize( &particles_buffer );
     assert( ret == 0 );
 
+//    std::cout << "size of particles: " << sizeof(particles_buffer) << std::endl;
+#if 0
+    std::cout << "\r\n"
+              << "Print the created particles: \r\n"
+              << "\r\n";
     st_BlockInfo const* it  = 
         st_Blocks_get_const_block_infos_begin( &particles_buffer );
     
@@ -302,16 +319,26 @@ int main()
                       << "\r\n";
         }
     }
-    
+#endif 
     std::cout.flush();
 
-    st_block_size_t NUM_TURNS = 10;
+    st_block_size_t NUM_TURNS = 100;
    // NS(Blocks) particles_buffer_copy;
 //    NS(Blocks_preset) (&particles_buffer_copy);
  // NS(Blocks) particles_buffer_copy =  
+
+
+
+
+  double clkbegin, clkend;
+  double t;
+
+  clkbegin = rtclock();
   track_drift_particles(beam_elements, particles_buffer, NUM_PARTICLES, NUM_TURNS);
+  clkend = rtclock();
+  t = clkend-clkbegin;
 
-
+#if 0
 // After applying the track_drift_particles map to  Particles
 std::cout << "After applying the track_drift_particles map to  Particles:" << std::endl;
 
@@ -343,13 +370,33 @@ std::cout << "After applying the track_drift_particles map to  Particles:" << st
                       << "\r\n";
         }
     }
-    
+#endif 
     std::cout.flush();
-
-
-
 
     st_Blocks_free( &particles_buffer );
 //    st_Blocks_free( &particles_buffer_copy );
+
+     if (ll < 5) continue; // do not record the time of the first 10 runs
+		
+     
+     num_of_turns += 1.0;
+     average_time_cpu += (t-average_time_cpu)/num_of_turns; // finding the average cpu running
+
+		
+ } // end of benchmarking 'for' loop
+		printf("Reference Version: Time = %.3f sec; \n",average_time_cpu);//*1.0e+9);
     return 0;
 }
+
+double rtclock()
+{
+  struct timezone Tzp;
+  struct timeval Tp;
+  int stat;
+  stat = gettimeofday (&Tp, &Tzp);
+  if (stat != 0) printf("Error return from gettimeofday: %d",stat);
+  return(Tp.tv_sec + Tp.tv_usec*1.0e-6);
+}
+
+
+
