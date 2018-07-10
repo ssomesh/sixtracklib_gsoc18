@@ -759,9 +759,11 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 //       In the body of the kernel, unserialize the work-item private NS(Block) instance of Particles, beam_elements and then use these instances.
 
     SIXTRL_UINT64_T const NUM_TURNS = 100;  
-    numThreads = 200;
-    blockSize = 100;
+    
     cl::Kernel track_drift_particle(program, "track_drift_particle");
+    blockSize = track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( devices[ndev]);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
     track_drift_particle.setArg(0,B);
     track_drift_particle.setArg(1,C);
     track_drift_particle.setArg(2,NUM_PARTICLES);
