@@ -253,8 +253,8 @@ int mk_test(std::vector<cl::Device> devices, int ndev,  cl::Context context, siz
         {
             num_of_turns += 1.0;
             average_time += (kernel_time_elapsed-average_time)/num_of_turns; // finding the running average
-            average_queue_time = (kernel_queue_time_elapsed - average_queue_time)/num_of_turns;
-            average_submission_time = (kernel_submission_time_elapsed - average_submission_time)/num_of_turns;
+            average_queue_time += (kernel_queue_time_elapsed - average_queue_time)/num_of_turns;
+            average_submission_time += (kernel_submission_time_elapsed - average_submission_time)/num_of_turns;
             average_time_cpu += (t-average_time_cpu)/num_of_turns; // finding the average cpu running
           std::cout << "kernel_time_elapsed in iteration " << ll << " : " << kernel_time_elapsed << std::endl;
           std::cout << "kernel_queue_time_elapsed in iteration " << ll << " : " << kernel_queue_time_elapsed << std::endl;

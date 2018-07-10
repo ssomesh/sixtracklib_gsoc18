@@ -144,14 +144,23 @@ NS(ParticlesSpecial)* NS(Blocks_add_particles_special)(
 
 #endif
 
-int main()
+int main(int argc, char** argv)
 {
+      if(argc != 2) {
+          std::cerr << "Usage: " << argv[0] << " < #particles > " << std::endl;
+          exit(1);
+        }
+  		int NUM_REPETITIONS = 15;//1010; // for benchmarking
+    	double num_of_turns = 0.0; // for timing
+    	double average_execution_time = 0.0;
+			
+			for(int ll = 0; ll < NUM_REPETITIONS; ++ll) {
     /* We will use 9+ beam element blocks in this example and do not 
      * care to be memory efficient yet; thus we make the blocks for 
      * beam elements and particles big enough to avoid running into problems */
     
-    constexpr st_block_size_t const MAX_NUM_BEAM_ELEMENTS       = 20u;
-    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 9u;
+    constexpr st_block_size_t const MAX_NUM_BEAM_ELEMENTS       = 1000u; // 20u;
+    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 1000u; //9u;
     
     /* 1MByte is plenty of space */
     constexpr st_block_size_t const BEAM_ELEMENTS_DATA_CAPACITY = 1048576u; 
@@ -216,7 +225,7 @@ int main()
      * print out the properties -> we expect that NUM_OF_BEAM_ELEMENTS
      * st_Drift with the same length appear and one st_DriftExact with a 
      * different length should appear in the end */
-    
+#if 0    
     std::cout << "\r\n"
               << "Print these newly created beam_elements: \r\n"
               << "\r\n";
@@ -271,7 +280,7 @@ int main()
             }
         };
     }
-    
+#endif 
     std::cout.flush();
     
 /************************** Preparing grounds for OpenCL *******/
@@ -281,7 +290,7 @@ int main()
         std::cerr << "OpenCL platforms not found." << std::endl;
         return 1;
       }
-      else std::cout << "Good" << std::endl;
+     // else std::cout << "Good" << std::endl;
 
     // Get all available devices.
     std::vector<cl::Device> devices;
@@ -352,7 +361,7 @@ int main()
        } 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     int ndev = 0; // specifying the id of the device to be used
-    cl::CommandQueue queue(context, devices[ndev]);
+    cl::CommandQueue queue(context, devices[ndev],CL_QUEUE_PROFILING_ENABLE);
     // Compile OpenCL program for found devices.
 			cl:: Program program(context, kernel_source); //string  kernel_source contains the kernel(s) read from the file
 
@@ -371,7 +380,7 @@ int main()
 
     try {
     std::string incls = "-D_GPUCODE=1 -D__NAMESPACE=st_ -I" + std::string(NS(PATH_TO_BASE_DIR)) + "include/";
-    std::cout << "Path = " << incls << std::endl;
+  //  std::cout << "Path = " << incls << std::endl;
     //program.build(devices, "-D_GPUCODE=1 -D__NAMESPACE=st_ -I/home/sosingh/sixtracklib_gsoc18/initial_test/sixtrack-v0/external/include");
     program.build(devices, incls.c_str());
     } catch (const cl::Error&) {
@@ -611,8 +620,8 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
    ////////////////////////// Particles //////////////////////////////// 
     st_block_size_t const NUM_PARTICLE_BLOCKS     = 1u;
-    st_block_size_t const PARTICLES_DATA_CAPACITY = 1048576u;
-    st_block_size_t const NUM_PARTICLES           = 100u;
+    st_block_size_t const PARTICLES_DATA_CAPACITY = 1048576u*50;
+    st_block_size_t const NUM_PARTICLES           = atoi(argv[1]); // 100u;
     
     st_Blocks particles_buffer;
     st_Blocks_preset( &particles_buffer );
@@ -650,7 +659,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         assert( particles->rpp   != nullptr );
         assert( particles->rvv   != nullptr );
         
-        assert( particles->num_of_particles == NUM_PARTICLES );
+        assert( particles->num_of_particles == (int)NUM_PARTICLES );
         
         for( st_block_size_t ii = 0 ; ii < NUM_PARTICLES ; ++ii )
         {
@@ -670,7 +679,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     
     /* ===================================================================== */
     /* Copy to other buffer to simulate working on the GPU */
-    std::cout << "On the GPU:\n"; 
+    //std::cout << "On the GPU:\n"; 
     
   // Allocate device buffers and transfer input data to device.
 
@@ -704,7 +713,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     ret = st_Blocks_unserialize( &copy_particles_buffer, copy_particles_buffer_host.data() );
     assert( ret == 0 );
     
-#if 1
+#if 0
     /* on the GPU, these pointers will have __global as a decorator */
 
     // On the CPU after copying the data back from the GPU
@@ -749,7 +758,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 //       The signature of it will contain something like: (global uchar copy_buffer, global uchar copy_particle_buffer)
 //       In the body of the kernel, unserialize the work-item private NS(Block) instance of Particles, beam_elements and then use these instances.
 
-    SIXTRL_UINT64_T const NUM_TURNS = 10;  
+    SIXTRL_UINT64_T const NUM_TURNS = 100;  
     numThreads = 200;
     blockSize = 100;
     cl::Kernel track_drift_particle(program, "track_drift_particle");
@@ -757,13 +766,42 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     track_drift_particle.setArg(1,C);
     track_drift_particle.setArg(2,NUM_PARTICLES);
     track_drift_particle.setArg(3,NUM_TURNS);
+    
+
+    cl::Event event;
+
     queue.enqueueNDRangeKernel( 
     track_drift_particle, cl::NullRange, cl::NDRange( numThreads ), 
-    cl::NDRange(blockSize ));
+    cl::NDRange(blockSize ), nullptr, &event);
     queue.flush();
+    event.wait();
     queue.finish();
 
-#if 1 
+        cl_ulong when_kernel_queued    = 0;
+        cl_ulong when_kernel_submitted = 0;
+        cl_ulong when_kernel_started   = 0;
+        cl_ulong when_kernel_ended     = 0;
+
+        ret  = event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_QUEUED, &when_kernel_queued );
+
+        ret |= event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_SUBMIT, &when_kernel_submitted );
+
+        ret |= event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_START, &when_kernel_started );
+
+        ret |= event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_END, &when_kernel_ended );
+
+        assert( ret == CL_SUCCESS ); // all ret's should be 1
+
+        double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
+        if( ll > 5 ) {
+          num_of_turns += 1.0;
+          average_execution_time += (kernel_time_elapsed - average_execution_time)/num_of_turns;
+      }
+
       queue.enqueueReadBuffer(C, CL_TRUE, 0, copy_particles_buffer_host.size() * sizeof(uint8_t), copy_particles_buffer_host.data());
       queue.flush();
 
@@ -775,6 +813,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     
     /* on the GPU, these pointers will have __global as a decorator */
 
+#if 0 
     // On the CPU after copying the data back from the GPU
     std::cout << "\n On the Host, after applying the drift_track_particles mapping and copying from the GPU\n";
     
@@ -806,11 +845,13 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
                       << "\r\n";
         }
     }
-    
+
+#endif
     std::cout.flush();
     st_Blocks_free( &particles_buffer );
     st_Blocks_free( &copy_particles_buffer );
-#endif
+  } // end of the NUM_REPETITIONS 'for' loop
+		printf("Reference Version: Time = %.3f s; \n",average_execution_time*1.0e-9);
     return 0;
 
   }
