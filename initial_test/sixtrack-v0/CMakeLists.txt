@@ -34,6 +34,17 @@ set_property( TARGET parallel_drift_cleanedup PROPERTY CXX_STANDARD_REQUIRED ON 
 set_property( TARGET parallel_drift_cleanedup PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic) 
 
 #-------------------------------------------------------------------
+# parallel_beam_elements
+
+add_executable( parallel_beam_elements parallel_beam_elements.cpp )
+             
+target_link_libraries( parallel_beam_elements SixTracklib::sixtrack ${OpenCL_LIBRARY} )
+
+set_property( TARGET parallel_beam_elements PROPERTY CXX_STANDARD 11 )
+set_property( TARGET parallel_beam_elements PROPERTY CXX_STANDARD_REQUIRED ON )
+set_property( TARGET parallel_beam_elements PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic) 
+
+#-------------------------------------------------------------------
 #sequential drift_cpu
 
 add_executable( drift_cpu drift_cpu.cpp )

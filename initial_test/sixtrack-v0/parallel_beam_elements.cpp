@@ -13,6 +13,7 @@
 
 */
 
+// The kernel file is "kernels_beam_elements.cl"
 
 #include <cassert>
 #include <cstdint>
@@ -23,6 +24,8 @@
 #include <iomanip>
 #include <random>
 #include <vector>
+#include <iterator>
+#include <fstream>
 
 #include "sixtracklib/_impl/definitions.h"
 #include "sixtracklib/_impl/path.h" // for NS(PATH_TO_BASE_DIR)
@@ -141,316 +144,23 @@ NS(ParticlesSpecial)* NS(Blocks_add_particles_special)(
 
 #endif
 
-static const char source[] =
-"#if defined(cl_khr_fp64)\n"
-"#  pragma OPENCL EXTENSION cl_khr_fp64: enable\n"
-"#elif defined(cl_amd_fp64)\n"
-"#  pragma OPENCL EXTENSION cl_amd_fp64: enable\n"
-"#else\n"
-"# error double precision is not supported\n"
-"#endif\n"
-"#include \"sixtracklib/_impl/namespace_begin.h\"\n"
-"#include \"sixtracklib/_impl/definitions.h\"\n"
-"#include \"sixtracklib/common/blocks.h\"\n"
-"#include \"sixtracklib/common/impl/particles_type.h\"\n"
-"#include \"sixtracklib/common/impl/particles_api.h\"\n"
-"#include \"sixtracklib/common/particles.h\"\n"
-"#include \"sixtracklib/common/impl/beam_elements_type.h\"\n"
-"#include \"sixtracklib/common/impl/beam_elements_api.h\"\n"
-"#include \"sixtracklib/common/beam_elements.h\"\n"
-"kernel void unserialize(\n"
-//"       ulong n,\n"
-"       global uchar *copy_buffer\n" // uint8_t is uchar
-//"       global NS(Blocks) copied_beam_elements\n" // uint8_t is uchar
-//"       global double *c\n"
-"       )\n"
-"{\n"
-"    size_t gid = get_global_id(0);\n"
-//"    printf(\"Hello from GPU\\n\");\n"
-"    NS(Blocks) copied_beam_elements;\n"
-"    NS(Blocks_preset)( &copied_beam_elements );\n" // very important for initialization
-"    int ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);\n"
-"     printf(\"ret = %d\\n\",ret);\n"
-
-"    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = \n"
-"        st_Blocks_get_const_block_infos_begin( &copied_beam_elements );\n"
-"   SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =\n"
-"        st_Blocks_get_const_block_infos_end( &copied_beam_elements );\n"
-//"   st_BlockInfo const info = *belem_it;\n"
-//"         NS(BlockType) const type_id = (NS(BlockType)) st_BlockInfo_get_type_id(&info );\n"
-
-//"     printf(\"%u %u\",(uintptr_t)belem_it,(uintptr_t)belem_end);\n"
-"    for( ; belem_it != belem_end ; ++belem_it )\n"
-"    {\n"
-//"        std::cout << std::setw( 6 ) << ii << \" | type: \";\n"
-"   st_BlockInfo const info = *belem_it;\n"
-"         NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );\n"
-"        switch( type_id )\n"
-"        {\n"
-"            case st_BLOCK_TYPE_DRIFT:\n"
-"            {\n"
-"                __global st_Drift const* drift = \n"
-"                    st_Blocks_get_const_drift( &info );\n"
-"       st_Drift const drift_private = *drift;"
-"       printf( \"type: drift | length =  \");\n"
-"       printf( \"%f\\n\",st_Drift_get_length( &drift_private ));\n"
-//"                std::cout << \"drift        | length = \"\n"
-//"                          << std::setw( 10 ) \n"
-//"                          << st_Drift_get_length( drift )\n"
-//"                          << \" [m] \\r\\n\";\n"
-"                            \n"
-"                break;\n"
-"            }\n"
-"            \n"
-"            case st_BLOCK_TYPE_DRIFT_EXACT:\n"
-"            {\n"
-"                __global st_DriftExact const* drift_exact =\n"
-"                    st_Blocks_get_const_drift_exact( &info );\n"
-"                \n"
-"       st_DriftExact const drift_exact_private = *drift_exact;"
-"       printf( \"type: drift_exact | length =  \");\n"
-"       printf( \"%f\\n\",st_DriftExact_get_length( &drift_exact_private ));\n"
-//"                std::cout << \"drift_exact  | length = \"\n"
-//"                          << std::setw( 10 )\n"
-//"                          << st_DriftExact_get_length( drift_exact )\n"
-//"                          << \" [m] \\r\\n\";\n"
-"                          \n"
-"                break;\n"
-"            }\n"
-"            \n"
-"            default:\n"
-"            {\n"
-//"                std::cout << \"unknown     | --> skipping\\r\\n\";\n"
-"                  printf(\"Bye!\\n\");\n"
-"            }\n"
-"        };\n"
-"    }\n"
-//"    std::cout.flush();\n"
-"}\n\n"
-
-
-"kernel void unserialize_particle(\n"
-"       global uchar *copy_buffer_particles,\n" // uint8_t is uchar
-"       ulong NUM_PARTICLES\n"
-"       )\n"
-"{\n"
-"    size_t gid = get_global_id(0);\n"
-"     NS(Blocks) copied_particles_buffer;\n"
-"     NS(Blocks_preset) (&copied_particles_buffer);\n"
-
-"     int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);\n"
-"     printf(\"ret = %d\\n\",ret);\n"
-"    SIXTRL_GLOBAL_DEC st_BlockInfo const* it  = \n" // is 'it' pointing to the set of outer particles? check.
-"        st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );\n"
-    
-"    SIXTRL_GLOBAL_DEC st_BlockInfo const* end = \n"
-"        st_Blocks_get_const_block_infos_end( &copied_particles_buffer );\n"
-//"     printf(\"%u %u\",(uintptr_t)it,(uintptr_t)end);\n"
-"    printf(\"NUM_PARTICLES = %u\\n\",NUM_PARTICLES );\n"    
-"    for( ; it != end ; ++it )\n"
-//"     printf(\"Hello hello!\\n\");\n"
-"    {\n"
-"     SIXTRL_GLOBAL_DEC NS(Particles) const* particles = \n"
-"            ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin;\n"
-"     for(st_block_size_t ii=0; ii < NUM_PARTICLES; ++ii )\n"
-"     {\n"
-"       printf(\"ii   = %6d\",ii);\n"
-"       printf(\" | s = %6.4f\",particles->s[ii]);\n"
-"       printf(\" | x = %6.4f\",particles->x[ii]);\n"
-"       printf(\" | y = %6.4f\",particles->y[ii]);\n"
-"       printf(\" | px = %6.4f\",particles->px[ii]);\n"
-"       printf(\" | py = %6.4f\",particles->py[ii]);\n"
-"       printf(\" | sigma = %6.4f\",particles->sigma[ii]);\n"
-"       printf(\" | rpp = %6.4f\",particles->rpp[ii]);\n"
-"       printf(\" | rvv = %6.4f\",particles->rvv[ii]);\n"
-"       printf(\"\\n\");\n"
-"    }\n"
-"   }\n"
-"}\n\n"
-
-"kernel void track_drift_particle(\n"
-"       global uchar *copy_buffer,\n" // uint8_t is uchar
-"       global uchar *copy_buffer_particles,\n" // uint8_t is uchar
-"       ulong NUM_PARTICLES\n"
-"       )\n"
-"{\n"
-"    size_t gid = get_global_id(0);\n"
-"    if(gid >= NUM_PARTICLES) return;\n"
-"    NS(block_num_elements_t) ii = gid;\n"
-//"    printf(\" | %d\",ii);\n"
-
-// For the particles
-"     NS(Blocks) copied_particles_buffer;\n"
-"     NS(Blocks_preset) (&copied_particles_buffer);\n"
-
-"     int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);\n"
-//"     printf(\"ret = %d\\n\",ret);\n"
-"    SIXTRL_GLOBAL_DEC st_BlockInfo const* it  = \n" // is 'it' pointing to the outer particles? check.
-"        st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );\n"
-"     SIXTRL_GLOBAL_DEC NS(Particles) const* particles = \n"
-"            ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin;\n" 
-// *particles now points to the first 'outer' particle
-// @ Assuming only a single outer particle
-// each 'ii' refers to an inner particle
-
-//"       printf(\"ii   = %6d\",ii);\n"
-//"       printf(\" | s = %6.4f\",particles->s[ii]);\n"
-//"       printf(\" | x = %6.4f\",particles->x[ii]);\n"
-//"       printf(\" | y = %6.4f\",particles->y[ii]);\n"
-//"       printf(\" | px = %6.4f\",particles->px[ii]);\n"
-//"       printf(\" | py = %6.4f\",particles->py[ii]);\n"
-//"       printf(\" | sigma = %6.4f\",particles->sigma[ii]);\n"
-//"       printf(\" | rpp = %6.4f\",particles->rpp[ii]);\n"
-//"       printf(\" | rvv = %6.4f\",particles->rvv[ii]);\n"
-//
-//"         \n"
-
-
-// for the beam element
-"    NS(Blocks) copied_beam_elements;\n"
-"    NS(Blocks_preset)( &copied_beam_elements );\n" // very important for initialization
-"    ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);\n"
-//"    printf(\"ret = %d\\n\",ret);\n"
-
-"    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = \n"
-"        st_Blocks_get_const_block_infos_begin( &copied_beam_elements );\n"
-"   SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =\n"
-"        st_Blocks_get_const_block_infos_end( &copied_beam_elements );\n"
-//"   st_BlockInfo const info = *belem_it;\n"
-//"         NS(BlockType) const type_id = (NS(BlockType)) st_BlockInfo_get_type_id(&info );\n"
-
-"    SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1;\n"
-"    SIXTRL_STATIC SIXTRL_REAL_T const ONE_HALF = ( SIXTRL_REAL_T )0.5L;\n"
-//"     printf(\"%u %u\",(uintptr_t)belem_it,(uintptr_t)belem_end);\n"
-
-// for each particle we apply the beam_elements, as applicable (decided by the switch case)
-"    for( ; belem_it != belem_end ; ++belem_it )\n"
-"    {\n"
-//"        std::cout << std::setw( 6 ) << ii << \" | type: \";\n"
-"   st_BlockInfo const info = *belem_it;\n"
-"         NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );\n"
-"        switch( type_id )\n"
-"        {\n"
-"            case st_BLOCK_TYPE_DRIFT:\n"
-"            {\n"
-"                __global st_Drift const* drift = \n"
-"                    st_Blocks_get_const_drift( &info );\n"
-"       st_Drift const drift_private = *drift;"
-"          SIXTRL_REAL_T const length = st_Drift_get_length( &drift_private );  \n"
-"       SIXTRL_REAL_T const rpp = particles->rpp[ii]; \n"
-"       SIXTRL_REAL_T const px = particles->px[ii] * rpp; \n"
-"       SIXTRL_REAL_T const py = particles->py[ii] * rpp; \n"
-"       SIXTRL_REAL_T const dsigma = \n"
-"          ONE - particles->rvv[ii]  * ( ONE + ONE_HALF * ( px * px + py * py ) );\n"
-"       SIXTRL_REAL_T sigma = particles->sigma[ii];\n"
-"       SIXTRL_REAL_T s = particles->s[ii];\n"
-"       SIXTRL_REAL_T x = particles->x[ii];\n"
-"       SIXTRL_REAL_T y = particles->y[ii];\n"
-"           sigma += length * dsigma;\n"
-"           s     += length;\n"
-"           x     += length * px;\n"
-"           y     += length * py;\n"
-"       particles->s[ ii ] = s;\n"
-"       particles->x[ ii ] = x;\n"
-"       particles->y[ ii ] = y;\n"
-"       particles->sigma[ ii ] = sigma;\n"
-//"       printf( \"type: drift | length =  \");\n"
-//"       printf( \"%f\\n\",st_Drift_get_length( &drift_private ));\n"
-
-//"                std::cout << \"drift        | length = \"\n"
-//"                          << std::setw( 10 ) \n"
-//"                          << st_Drift_get_length( drift )\n"
-//"                          << \" [m] \\r\\n\";\n"
-"                            \n"
-"                break;\n"
-"            }\n"
-"            \n"
-"            case st_BLOCK_TYPE_DRIFT_EXACT:\n"
-"            {\n"
-"                __global st_DriftExact const* drift_exact =\n"
-"                    st_Blocks_get_const_drift_exact( &info );\n"
-"                \n"
-"       st_DriftExact const drift_exact_private = *drift_exact;"
-//"       printf( \"type: drift_exact | length =  \");\n"
-//"       printf( \"%f\\n\",st_DriftExact_get_length( &drift_exact_private ));\n"
-//"                std::cout << \"drift_exact  | length = \"\n"
-//"                          << std::setw( 10 )\n"
-//"                          << st_DriftExact_get_length( drift_exact )\n"
-//"                          << \" [m] \\r\\n\";\n"
-"                          \n"
-"                break;\n"
-"            }\n"
-"            \n"
-"            default:\n"
-"            {\n"
-//"                std::cout << \"unknown     | --> skipping\\r\\n\";\n"
-"                  printf(\"Bye!\\n\");\n"
-"            }\n"
-"        };\n"
-"    }\n"
-"      \n"
-"}\n";
-
-//"kernel void track_drift_particle(\n" // a parallel version of Track_drift_particle from track.h
-////"       ulong n,\n"
-//"       global uchar *particles_buffer\n" // for the particles
-////"       global NS(Blocks) copied_beam_elements\n" // uint8_t is uchar
-////"       global double *c\n"
-//"       )\n"
-//"{\n"
-//"    size_t gid = get_global_id(0);\n" // element id
-//"      auto const type_id = st_BlockInfo_get_type_id( gid );\n"
-//      
-//"        switch( type_id )\n"
-//"        {\n"
-//"            case st_BLOCK_TYPE_DRIFT:\n"
-//"            {\n"
-//"                st_Drift const* drift = \n"
-//"                    st_Blocks_get_const_drift( gid );\n"
-//"                    double const rpp = 1;\n" // keeping rpp constant 
-//"                    double const px = 1;\n" // keeping px constant 
-//"                    double const py = 1;\n" // keeping py constant 
-//"                    double const dsigma = 1.0f - NS(Particles_get_rvv_value)(particles, gid) * (1.0f + 0.5f * (px * px + py *py));\n" 
-//"    double sigma = NS(Particles_get_sigma_value)( particles, gid );\n"
-//"    double s     = NS(Particles_get_s_value)( particles, gid );\n"
-//"    double x     = NS(Particles_get_x_value)( particles, gid );\n"
-//"    double y     = NS(Particles_get_y_value)( particles, gid );\n"
-//    
-//"    sigma += length * dsigma;\n"
-//"    s     += length;\n"
-//"    x     += length * px;\n"
-//"    y     += length * py;\n"
-//    
-//"    NS(Particles_set_s_value)( particles, gid, s );\n"
-//"    NS(Particles_set_x_value)( particles, gid, x );\n"
-//"    NS(Particles_set_y_value)( particles, gid, y );\n"
-//"    NS(Particles_set_sigma_value)( particles, gid, sigma );\n"
-//                            
-//"                break;\n"
-//"            }\n"
-//            
-//"            case st_BLOCK_TYPE_DRIFT_EXACT:\n"
-//"            {\n"
-//"                st_DriftExact const* drift_exact =\n"
-//"                    st_Blocks_get_const_drift_exact( gid );\n"
-//"                break;\n"
-//"            }\n"
-//            
-//"            default:\n"
-//"            {\n"
-//"                printf( \"unknown     | --> skipping\r\n\");\n"
-//"            }\n"
-//"        };\n"
-//
-//"}\n";
-int main()
+int main(int argc, char** argv)
 {
+      if(argc != 2) {
+          std::cerr << "Usage: " << argv[0] << " < #particles > " << std::endl;
+          exit(1);
+        }
+  		int NUM_REPETITIONS = 15;//1010; // for benchmarking
+    	double num_of_turns = 0.0; // for timing
+    	double average_execution_time = 0.0;
+			
+			for(int ll = 0; ll < NUM_REPETITIONS; ++ll) {
     /* We will use 9+ beam element blocks in this example and do not 
      * care to be memory efficient yet; thus we make the blocks for 
      * beam elements and particles big enough to avoid running into problems */
     
-    constexpr st_block_size_t const MAX_NUM_BEAM_ELEMENTS       = 20u;
-    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 9u;
+    constexpr st_block_size_t const MAX_NUM_BEAM_ELEMENTS       = 1000u; // 20u;
+    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 1000u; //9u;
     
     /* 1MByte is plenty of space */
     constexpr st_block_size_t const BEAM_ELEMENTS_DATA_CAPACITY = 1048576u; 
@@ -486,18 +196,18 @@ int main()
      * we could still add blocks to the buffer. Let's jus do this and 
      * add a different kind of beam element to keep it easier apart! */
     
-    st_DriftExact* drift_exact = st_Blocks_add_drift_exact( 
-        &beam_elements, double{ 0.1 } );
+//    st_DriftExact* drift_exact = st_Blocks_add_drift_exact( 
+//        &beam_elements, double{ 0.1 } );
     
-    assert( drift_exact != nullptr );
+//    assert( drift_exact != nullptr );
     
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
-            ( NUM_OF_BEAM_ELEMENTS + 1 ) );
+            ( NUM_OF_BEAM_ELEMENTS) );
     
     /* Always safely terminate pointer variables pointing to resources they
      * do not own which we no longer need -> just a good practice */
     
-    drift_exact = nullptr;
+//    drift_exact = nullptr;
     
     /* After serialization, the "structure" of the beam_elements buffer is 
      * frozen, but the data in the elements - i.e. the length of the 
@@ -515,7 +225,7 @@ int main()
      * print out the properties -> we expect that NUM_OF_BEAM_ELEMENTS
      * st_Drift with the same length appear and one st_DriftExact with a 
      * different length should appear in the end */
-    
+#if 0    
     std::cout << "\r\n"
               << "Print these newly created beam_elements: \r\n"
               << "\r\n";
@@ -570,7 +280,7 @@ int main()
             }
         };
     }
-    
+#endif 
     std::cout.flush();
     
 /************************** Preparing grounds for OpenCL *******/
@@ -580,7 +290,7 @@ int main()
         std::cerr << "OpenCL platforms not found." << std::endl;
         return 1;
       }
-      else std::cout << "Good" << std::endl;
+     // else std::cout << "Good" << std::endl;
 
     // Get all available devices.
     std::vector<cl::Device> devices;
@@ -604,14 +314,12 @@ int main()
       // Create context
     cl::Context context;
     context = cl::Context(devices);
-    
-    std::cout << "Devices count = " << devices.size() << std::endl;
 
-    std::cout << "Device list" << std::endl;
-    for(unsigned int jj=0; jj<devices.size(); jj++){
-      std::cout << "Name of devicei " << jj<<" : "<<devices[jj].getInfo<CL_DEVICE_NAME>() << std::endl;
-      std::cout << "resolution of device timer for device " << jj <<" : "<<devices[jj].getInfo<CL_DEVICE_PROFILING_TIMER_RESOLUTION>() << std::endl;
-    };
+//    std::cout << "Device list" << std::endl;
+//    for(unsigned int jj=0; jj<devices.size(); jj++){
+//      std::cout << "Name of devicei " << jj<<" : "<<devices[jj].getInfo<CL_DEVICE_NAME>() << std::endl;
+//      std::cout << "resolution of device timer for device " << jj <<" : "<<devices[jj].getInfo<CL_DEVICE_PROFILING_TIMER_RESOLUTION>() << std::endl;
+//    };
 /**********************************************/
 
     /* Let's simulate how to use the serialized data to be passed to 
@@ -624,9 +332,9 @@ int main()
      * data-range iterators pointing to the "data begin" and "data end" 
      * positions in the serialized buffer*/
     
-    std::vector< uint8_t > copy_buffer( 
-        st_Blocks_get_const_data_begin( &beam_elements ), 
-        st_Blocks_get_const_data_end( &beam_elements ) );
+//    std::vector< uint8_t > copy_buffer( 
+//        st_Blocks_get_const_data_begin( &beam_elements ), 
+//        st_Blocks_get_const_data_end( &beam_elements ) );
     
     /* this is a completly different buffer, but it contains the same data: */
     
@@ -634,16 +342,45 @@ int main()
     // launch a kernel with 1 thread and pass the copy_buffer 
     // and call st_Blocks_unserialize on it
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // getting the kernel file
+   std::string PATH_TO_KERNEL_FILE( st_PATH_TO_BASE_DIR );
+       PATH_TO_KERNEL_FILE += "../kernels_beam_elements.cl";
+
+       std::string kernel_source( "" );
+       std::ifstream kernel_file( PATH_TO_KERNEL_FILE.c_str(),
+                                  std::ios::in | std::ios::binary );
+
+       if( kernel_file.is_open() )
+       {
+           std::istreambuf_iterator< char > file_begin( kernel_file.rdbuf() );
+           std::istreambuf_iterator< char > end_of_file;
+
+           kernel_source.assign( file_begin, end_of_file );
+           kernel_file.close();
+       } 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
     int ndev = 0; // specifying the id of the device to be used
-    cl::CommandQueue queue(context, devices[ndev]);
+    cl::CommandQueue queue(context, devices[ndev],CL_QUEUE_PROFILING_ENABLE);
     // Compile OpenCL program for found devices.
-    cl::Program program(context, cl::Program::Sources(
-        1, std::make_pair(source, strlen(source))
-        ));
+			cl:: Program program(context, kernel_source); //string  kernel_source contains the kernel(s) read from the file
+
+#if 0
+/////////////////////// Alternative 1 for including the kernels written in a separate file -- works perfectly fine /////////////////////////////////
+			cl:: Program program(context, "#include \"../kernels.cl\" ", false); // the path inside the #include should be relative to an include directory specified using -Ipath/to/dir specified via build options.. otherwise give the absolute path. 
+#endif
+
+#if 0
+/////////////////////// The way to go if the string source[] contains the source in the same file as this.
+
+//    cl::Program program(context, cl::Program::Sources(
+//        1, std::make_pair(source, strlen(source))
+//        ));
+#endif
 
     try {
     std::string incls = "-D_GPUCODE=1 -D__NAMESPACE=st_ -I" + std::string(NS(PATH_TO_BASE_DIR)) + "include/";
-    std::cout << "Path = " << incls << std::endl;
+  //  std::cout << "Path = " << incls << std::endl;
     //program.build(devices, "-D_GPUCODE=1 -D__NAMESPACE=st_ -I/home/sosingh/sixtracklib_gsoc18/initial_test/sixtrack-v0/external/include");
     program.build(devices, incls.c_str());
     } catch (const cl::Error&) {
@@ -692,17 +429,18 @@ int main()
   // Allocate device buffers and transfer input data to device.
 //  cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
 //      copy_buffer.size() * sizeof(uint8_t), copy_buffer.data()); // input vector
-    cl::Buffer B(context, CL_MEM_READ_WRITE, copy_buffer.size() * sizeof(uint8_t)); // input vector
-    queue.enqueueWriteBuffer( B, CL_TRUE, 0, copy_buffer.size() * sizeof(uint8_t), copy_buffer.data() )    ;
-    int numThreads = 1;
-    int blockSize = 1;
-    cl::Kernel unserialize(program, "unserialize");
-    unserialize.setArg(0,B);
-    queue.enqueueNDRangeKernel( 
-    unserialize, cl::NullRange, cl::NDRange( numThreads ), 
-    cl::NDRange(blockSize ));
-    queue.flush();
-    queue.finish();
+    cl::Buffer B(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements  )); // input vector
+queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements ), st_Blocks_get_const_data_begin( &beam_elements ) );
+
+//    int numThreads = 1;
+//    int blockSize = 1;
+//    cl::Kernel unserialize(program, "unserialize");
+//    unserialize.setArg(0,B);
+//    queue.enqueueNDRangeKernel( 
+//    unserialize, cl::NullRange, cl::NDRange( numThreads ), 
+//    cl::NDRange(blockSize ));
+//    queue.flush();
+//    queue.finish();
 
 
     // Assuming the particles block and beam_elements block are unserialized on the GPU, we enqueue the kernel track_drift_particle
@@ -720,7 +458,7 @@ int main()
 
     
 
-
+#if 0
       // creating a buffer to transfer the data from GPU to CPU
 
       std::vector< uint8_t > copy_buffer_host(copy_buffer.size());  // output vector
@@ -797,6 +535,7 @@ int main()
     
     std::cout << "\r\n\r\n"
               << "Finished successfully!" << std::endl;
+#endif
 
 //    
 //    ret = st_Blocks_unserialize( &copied_beam_elements, copy_buffer.data() );
@@ -881,8 +620,8 @@ int main()
 
    ////////////////////////// Particles //////////////////////////////// 
     st_block_size_t const NUM_PARTICLE_BLOCKS     = 1u;
-    st_block_size_t const PARTICLES_DATA_CAPACITY = 1048576u;
-    st_block_size_t const NUM_PARTICLES           = 100u;
+    st_block_size_t const PARTICLES_DATA_CAPACITY = 1048576u*50;
+    st_block_size_t const NUM_PARTICLES           = atoi(argv[1]); // 100u;
     
     st_Blocks particles_buffer;
     st_Blocks_preset( &particles_buffer );
@@ -920,7 +659,7 @@ int main()
         assert( particles->rpp   != nullptr );
         assert( particles->rvv   != nullptr );
         
-        assert( particles->num_of_particles == NUM_PARTICLES );
+        assert( particles->num_of_particles == (int)NUM_PARTICLES );
         
         for( st_block_size_t ii = 0 ; ii < NUM_PARTICLES ; ++ii )
         {
@@ -940,32 +679,30 @@ int main()
     
     /* ===================================================================== */
     /* Copy to other buffer to simulate working on the GPU */
-    std::cout << "On the GPU:\n"; 
-    
-    std::vector< uint8_t > copy_buffer_1( 
-        st_Blocks_get_const_data_begin( &particles_buffer ), 
-        st_Blocks_get_const_data_end( &particles_buffer ) );
-    
+    //std::cout << "On the GPU:\n"; 
     
   // Allocate device buffers and transfer input data to device.
 
-    cl::Buffer C(context, CL_MEM_READ_WRITE, copy_buffer_1.size() * sizeof(uint8_t)); // input vector
-    queue.enqueueWriteBuffer( C, CL_TRUE, 0, copy_buffer_1.size() * sizeof(uint8_t), copy_buffer_1.data() )    ;
+    cl::Buffer C(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &particles_buffer )); // input vector
+		queue.enqueueWriteBuffer( C, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &particles_buffer ), st_Blocks_get_const_data_begin( &particles_buffer ) );
 
-
-    cl::Kernel unserialize_particle(program, "unserialize_particle");
-    unserialize_particle.setArg(0,C);
-    unserialize_particle.setArg(1,NUM_PARTICLES);
+    int numThreads = 1;
+    int blockSize = 1;
+    cl::Kernel unserialize(program, "unserialize");
+    unserialize.setArg(0,B);
+    unserialize.setArg(1,C);
+    unserialize.setArg(2,NUM_PARTICLES);
     queue.enqueueNDRangeKernel( 
-    unserialize_particle, cl::NullRange, cl::NDRange( numThreads ), 
+    unserialize, cl::NullRange, cl::NDRange( numThreads ), 
     cl::NDRange(blockSize ));
     queue.flush();
     queue.finish();
 
+
     
       // creating a buffer to transfer the data from GPU to CPU
 
-      std::vector< uint8_t > copy_particles_buffer_host(copy_buffer_1.size());  // output vector
+      std::vector< uint8_t > copy_particles_buffer_host(st_Blocks_get_total_num_bytes( &particles_buffer )/sizeof(uint8_t));  // output vector
     
       queue.enqueueReadBuffer(C, CL_TRUE, 0, copy_particles_buffer_host.size() * sizeof(uint8_t), copy_particles_buffer_host.data());
       queue.flush();
@@ -976,7 +713,7 @@ int main()
     ret = st_Blocks_unserialize( &copy_particles_buffer, copy_particles_buffer_host.data() );
     assert( ret == 0 );
     
-#if 1
+#if 0
     /* on the GPU, these pointers will have __global as a decorator */
 
     // On the CPU after copying the data back from the GPU
@@ -1021,19 +758,52 @@ int main()
 //       The signature of it will contain something like: (global uchar copy_buffer, global uchar copy_particle_buffer)
 //       In the body of the kernel, unserialize the work-item private NS(Block) instance of Particles, beam_elements and then use these instances.
 
-    numThreads = 200;
-    blockSize = 100;
+    SIXTRL_UINT64_T const NUM_TURNS = 100;  
+    
     cl::Kernel track_drift_particle(program, "track_drift_particle");
+    blockSize = track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( devices[ndev]);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
     track_drift_particle.setArg(0,B);
     track_drift_particle.setArg(1,C);
     track_drift_particle.setArg(2,NUM_PARTICLES);
+    track_drift_particle.setArg(3,NUM_TURNS);
+    
+
+    cl::Event event;
+
     queue.enqueueNDRangeKernel( 
     track_drift_particle, cl::NullRange, cl::NDRange( numThreads ), 
-    cl::NDRange(blockSize ));
+    cl::NDRange(blockSize ), nullptr, &event);
     queue.flush();
+    event.wait();
     queue.finish();
 
-#if 1 
+        cl_ulong when_kernel_queued    = 0;
+        cl_ulong when_kernel_submitted = 0;
+        cl_ulong when_kernel_started   = 0;
+        cl_ulong when_kernel_ended     = 0;
+
+        ret  = event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_QUEUED, &when_kernel_queued );
+
+        ret |= event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_SUBMIT, &when_kernel_submitted );
+
+        ret |= event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_START, &when_kernel_started );
+
+        ret |= event.getProfilingInfo< cl_ulong >( 
+          CL_PROFILING_COMMAND_END, &when_kernel_ended );
+
+        assert( ret == CL_SUCCESS ); // all ret's should be 1
+
+        double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
+        if( ll > 5 ) {
+          num_of_turns += 1.0;
+          average_execution_time += (kernel_time_elapsed - average_execution_time)/num_of_turns;
+      }
+
       queue.enqueueReadBuffer(C, CL_TRUE, 0, copy_particles_buffer_host.size() * sizeof(uint8_t), copy_particles_buffer_host.data());
       queue.flush();
 
@@ -1045,6 +815,7 @@ int main()
     
     /* on the GPU, these pointers will have __global as a decorator */
 
+#if 0 
     // On the CPU after copying the data back from the GPU
     std::cout << "\n On the Host, after applying the drift_track_particles mapping and copying from the GPU\n";
     
@@ -1076,11 +847,13 @@ int main()
                       << "\r\n";
         }
     }
-    
+
+#endif
     std::cout.flush();
     st_Blocks_free( &particles_buffer );
     st_Blocks_free( &copy_particles_buffer );
-#endif
+  } // end of the NUM_REPETITIONS 'for' loop
+		printf("Reference Version: Time = %.3f s; \n",average_execution_time*1.0e-9);
     return 0;
 
   }
