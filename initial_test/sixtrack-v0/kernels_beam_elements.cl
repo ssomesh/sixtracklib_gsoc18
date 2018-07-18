@@ -102,42 +102,42 @@ kernel void track_drift_particle(
 							 particles->sigma[ ii ] = sigma;
 							 break;
 						 }
-            case st_BLOCK_TYPE_DRIFT_EXACT:
-            {
-							 __global st_Drift const* drift_exact = 
-							 st_Blocks_get_const_drift_exact( &info );
-							 st_Drift const drift_exact_private = *drift_exact;
-							 
-    SIXTRL_STATIC SIXTRL_REAL_T const ONE = ( SIXTRL_REAL_T )1u;
-    
-    SIXTRL_REAL_T const length = NS(DriftExact_get_length)( &drift_exact_private );
-    SIXTRL_REAL_T const delta  = particles->delta[ii];
-    SIXTRL_REAL_T const beta0  = particles->beta0[ii];
-    SIXTRL_REAL_T const px  = particles->px[ii];
-    SIXTRL_REAL_T const py  = particles->py[ii];
-    SIXTRL_REAL_T sigma        = particles->sigma[ii];
-                        
-    SIXTRL_REAL_T const opd   = delta + ONE;
-    SIXTRL_REAL_T const lpzi  = ( length ) / 
-        sqrt( opd * opd - px * px - py * py );
-    
-    SIXTRL_REAL_T const lbzi  = ( beta0 * beta0 * sigma + ONE ) * lpzi;
-    
-							 SIXTRL_REAL_T s = particles->s[ii];
-							 SIXTRL_REAL_T x = particles->x[ii];
-							 SIXTRL_REAL_T y = particles->y[ii];
-    
-    x     += px * lpzi;
-    y     += py * lpzi;
-    s     += length;
-    sigma += length - lbzi;
-    
-							 particles->s[ ii ] = s;
-							 particles->x[ ii ] = x;
-							 particles->y[ ii ] = y;
-							 particles->sigma[ ii ] = sigma;
-							 break;
-						}
+             case st_BLOCK_TYPE_DRIFT_EXACT:
+             {
+               __global st_Drift const* drift_exact = 
+                 st_Blocks_get_const_drift_exact( &info );
+               st_Drift const drift_exact_private = *drift_exact;
+
+               SIXTRL_STATIC SIXTRL_REAL_T const ONE = ( SIXTRL_REAL_T )1u;
+
+               SIXTRL_REAL_T const length = NS(DriftExact_get_length)( &drift_exact_private );
+               SIXTRL_REAL_T const delta  = particles->delta[ii];
+               SIXTRL_REAL_T const beta0  = particles->beta0[ii];
+               SIXTRL_REAL_T const px  = particles->px[ii];
+               SIXTRL_REAL_T const py  = particles->py[ii];
+               SIXTRL_REAL_T sigma        = particles->sigma[ii];
+
+               SIXTRL_REAL_T const opd   = delta + ONE;
+               SIXTRL_REAL_T const lpzi  = ( length ) / 
+                 sqrt( opd * opd - px * px - py * py );
+
+               SIXTRL_REAL_T const lbzi  = ( beta0 * beta0 * sigma + ONE ) * lpzi;
+
+               SIXTRL_REAL_T s = particles->s[ii];
+               SIXTRL_REAL_T x = particles->x[ii];
+               SIXTRL_REAL_T y = particles->y[ii];
+
+               x     += px * lpzi;
+               y     += py * lpzi;
+               s     += length;
+               sigma += length - lbzi;
+
+               particles->s[ ii ] = s;
+               particles->x[ ii ] = x;
+               particles->y[ ii ] = y;
+               particles->sigma[ ii ] = sigma;
+               break;
+             }
 							
 						 default:
 						 {
