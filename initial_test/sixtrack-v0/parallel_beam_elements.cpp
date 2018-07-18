@@ -11,6 +11,10 @@
  // IMP: The idea is to pass the memory (i.e. the serialzed array of type unsigned char) to the kernel and to reconstruct the NS(Blocks) instance then from there.
   So, NS(Blocks) needs to be reconstructed on the GPU and not passed to the GPU
 
+**************************************************
+Only drift and drift_exact have the same amount of space.
+Multipole for example has additonal data-members and takes more space.
+***************************************************
 */
 
 // The kernel file is "kernels_beam_elements.cl"
@@ -177,8 +181,9 @@ int main(int argc, char** argv)
     
     /* Add NUM_OF_BEAM_ELEMENTS drifts to the buffer. For this example, let's
      * just have one simple constant length for all of them: */
-    
-    for( st_block_size_t ii = 0 ; ii < NUM_OF_BEAM_ELEMENTS ; ++ii )
+
+   // Half of the beam-elements are drift-elements 
+    for( st_block_size_t ii = 0 ; ii < NUM_OF_BEAM_ELEMENTS/2 ; ++ii )
     {
         double const drift_length = double{ 0.2L };
         st_Drift* drift = st_Blocks_add_drift( &beam_elements, drift_length );
@@ -190,17 +195,20 @@ int main(int argc, char** argv)
      * if they really are all drifts */
     
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
-            NUM_OF_BEAM_ELEMENTS );
+            NUM_OF_BEAM_ELEMENTS/2 );
     
     /* The beam_elements container is currently not serialized yet -> 
      * we could still add blocks to the buffer. Let's jus do this and 
      * add a different kind of beam element to keep it easier apart! */
     
-//    st_DriftExact* drift_exact = st_Blocks_add_drift_exact( 
-//        &beam_elements, double{ 0.1 } );
+    for( st_block_size_t ii = NUM_OF_BEAM_ELEMENTS/2 ; ii < NUM_OF_BEAM_ELEMENTS ; ++ii )
+    {
+        double const drift_length = double{ 0.1L };
+    st_DriftExact* drift_exact = st_Blocks_add_drift_exact( 
+        &beam_elements, drift_length );
     
-//    assert( drift_exact != nullptr );
-    
+    assert( drift_exact != nullptr );
+   } 
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
             ( NUM_OF_BEAM_ELEMENTS) );
     
