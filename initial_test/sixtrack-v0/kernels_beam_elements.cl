@@ -104,9 +104,9 @@ kernel void track_drift_particle(
           }
         case st_BLOCK_TYPE_DRIFT_EXACT:
           {
-            __global st_Drift const* drift_exact = 
+            __global st_DriftExact const* drift_exact = 
               st_Blocks_get_const_drift_exact( &info );
-            st_Drift const drift_exact_private = *drift_exact;
+            st_DriftExact const drift_exact_private = *drift_exact;
 
             SIXTRL_STATIC SIXTRL_REAL_T const ONE = ( SIXTRL_REAL_T )1u;
 
@@ -139,6 +139,47 @@ kernel void track_drift_particle(
             break;
           }
 
+        case st_BLOCK_TYPE_CAVITY:
+          {
+            __global st_Cavity const* cavity = 
+              st_Blocks_get_const_cavity( &info );
+            st_Cavity const cavity_private = *cavity;
+
+            SIXTRL_STATIC_VAR SIXTRL_REAL_T const ONE  = ( SIXTRL_REAL_T )1.0L;
+            SIXTRL_STATIC_VAR SIXTRL_REAL_T const TWO  = ( SIXTRL_REAL_T )2.0L;
+            SIXTRL_STATIC_VAR SIXTRL_REAL_T const PI   =
+              ( SIXTRL_REAL_T )3.1415926535897932384626433832795028841971693993751L;
+            SIXTRL_STATIC_VAR SIXTRL_REAL_T const CLIGHT = ( SIXTRL_REAL_T )299792458u;
+            SIXTRL_REAL_T const beta0  = particles->beta0[ii];
+            SIXTRL_REAL_T sigma        = particles->sigma[ii];
+            SIXTRL_REAL_T psigma_init        = particles->psigma[ii];
+            SIXTRL_REAL_T chi        = particles->chi[ii];
+            SIXTRL_REAL_T p0c        = particles->p0c[ii];
+
+            SIXTRL_REAL_T const phase = NS(Cavity_get_lag)( &cavity_private ) -
+              ( TWO * PI * NS(Cavity_get_frequency)( &cavity_private ) *
+                ( sigma / beta0 )
+              ) / CLIGHT;
+
+
+            SIXTRL_REAL_T const psigma =
+              psigma_init +
+              ( chi *
+                NS(Cavity_get_voltage)( &cavity_private ) * sin( phase ) ) /
+              ( p0c * beta0 );
+
+
+            SIXTRL_REAL_T const pt    = psigma * beta0;
+            SIXTRL_REAL_T const opd   = sqrt( pt * pt + TWO * psigma + ONE );
+            SIXTRL_REAL_T const beta  = opd / ( ONE / beta0 + pt );
+
+            particles->psigma[ii] = psigma;
+            particles->delta[ii] = opd - ONE;
+            particles->rpp[ii] = ONE  / opd ;
+            particles->rvv[ii] = beta0 / beta;
+
+            break;
+          }
         default:
           {
             printf("unknown     | --> skipping\n");
