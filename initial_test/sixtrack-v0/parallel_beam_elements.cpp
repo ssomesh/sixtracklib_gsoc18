@@ -182,8 +182,8 @@ int main(int argc, char** argv)
     /* Add NUM_OF_BEAM_ELEMENTS drifts to the buffer. For this example, let's
      * just have one simple constant length for all of them: */
 
-   // Half of the beam-elements are drift-elements 
-    for( st_block_size_t ii = 0 ; ii < NUM_OF_BEAM_ELEMENTS/2 ; ++ii )
+   // One-fourth of the beam-elements are drift-elements 
+    for( st_block_size_t ii = 0 ; ii < NUM_OF_BEAM_ELEMENTS/4 ; ++ii )
     {
         double const drift_length = double{ 0.2L };
         st_Drift* drift = st_Blocks_add_drift( &beam_elements, drift_length );
@@ -195,13 +195,13 @@ int main(int argc, char** argv)
      * if they really are all drifts */
     
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
-            NUM_OF_BEAM_ELEMENTS/2 );
+            NUM_OF_BEAM_ELEMENTS/4 );
     
     /* The beam_elements container is currently not serialized yet -> 
      * we could still add blocks to the buffer. Let's jus do this and 
      * add a different kind of beam element to keep it easier apart! */
     
-    for( st_block_size_t ii = NUM_OF_BEAM_ELEMENTS/2 ; ii < NUM_OF_BEAM_ELEMENTS*0.75 ; ++ii )
+    for( st_block_size_t ii = NUM_OF_BEAM_ELEMENTS/4 ; ii < NUM_OF_BEAM_ELEMENTS/2 ; ++ii )
     {
         double const drift_length = double{ 0.1L };
     st_DriftExact* drift_exact = st_Blocks_add_drift_exact( 
@@ -211,11 +211,11 @@ int main(int argc, char** argv)
    } 
 
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
-            ( NUM_OF_BEAM_ELEMENTS*0.75) );
+            ( NUM_OF_BEAM_ELEMENTS*0.5) );
 
     /* Adding the beam element 'cavity' */
 
-    for( st_block_size_t ii = NUM_OF_BEAM_ELEMENTS*0.75 ; ii < NUM_OF_BEAM_ELEMENTS ; ++ii )
+    for( st_block_size_t ii = NUM_OF_BEAM_ELEMENTS*0.5 ; ii < NUM_OF_BEAM_ELEMENTS*0.75 ; ++ii )
     {
       double const voltage = double{ 1e4};
       double const frequency = double{ 40};
@@ -225,8 +225,23 @@ int main(int argc, char** argv)
       assert( cavity != nullptr ); /* Otherwise, there was a problem! */
     }
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
-            ( NUM_OF_BEAM_ELEMENTS) );
+            ( NUM_OF_BEAM_ELEMENTS * 0.75) );
     
+    /* Adding the beam element 'align' */
+    double const M__PI   = // note the two underscores between M and PI
+      ( double )3.1415926535897932384626433832795028841971693993751L;
+    for( st_block_size_t ii = NUM_OF_BEAM_ELEMENTS*0.75 ; ii < NUM_OF_BEAM_ELEMENTS ; ++ii )
+    {
+      double const tilt = double{ 0.5};
+      double const z = double{ M__PI / 45};
+      double const dx = double{ 0.2L};
+      double const dy = double{ 0.2L};
+      st_Align* align = st_Blocks_add_align(
+          &beam_elements, tilt, cos( z ), sin( z ), dx, dy);
+      assert( align != nullptr ); /* Otherwise, there was a problem! */
+    }
+    assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
+        ( NUM_OF_BEAM_ELEMENTS) );
     /* Always safely terminate pointer variables pointing to resources they
      * do not own which we no longer need -> just a good practice */
     
