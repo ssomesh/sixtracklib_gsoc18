@@ -180,6 +180,34 @@ kernel void track_drift_particle(
 
             break;
           }
+        case st_BLOCK_TYPE_ALIGN:
+          {
+            __global st_Align const* align = 
+              st_Blocks_get_const_align( &info );
+            st_Align const align_private = *align;
+            SIXTRL_REAL_T const sz = NS(Align_get_sz)( &align_private );
+            SIXTRL_REAL_T const cz = NS(Align_get_cz)( &align_private );
+            SIXTRL_REAL_T x = particles->x[ii];
+            SIXTRL_REAL_T y = particles->y[ii];
+            SIXTRL_REAL_T px = particles->px[ii];
+            SIXTRL_REAL_T py = particles->py[ii];
+
+            SIXTRL_REAL_T temp     = cz * x - sz * y - NS(Align_get_dx)( &align_private );
+            y    =  sz * x + cz * y - NS(Align_get_dy)( &align_private );
+            x    =  temp;
+
+            temp =  cz * px + sz * py;
+            py   = -sz * px + cz * py;
+            px   =  temp;
+
+            particles->x[ii] = x;
+            particles->y[ii] = y;
+            particles->px[ii] = px;
+            particles->py[ii] = py;
+
+            break;
+          }
+
         default:
           {
             printf("unknown     | --> skipping\n");
