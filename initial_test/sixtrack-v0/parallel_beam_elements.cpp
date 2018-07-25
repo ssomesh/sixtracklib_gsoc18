@@ -201,7 +201,7 @@ int main(int argc, char** argv)
      * we could still add blocks to the buffer. Let's jus do this and 
      * add a different kind of beam element to keep it easier apart! */
     
-    for( st_block_size_t ii = NUM_OF_BEAM_ELEMENTS/2 ; ii < NUM_OF_BEAM_ELEMENTS ; ++ii )
+    for( st_block_size_t ii = NUM_OF_BEAM_ELEMENTS/2 ; ii < NUM_OF_BEAM_ELEMENTS*0.75 ; ++ii )
     {
         double const drift_length = double{ 0.1L };
     st_DriftExact* drift_exact = st_Blocks_add_drift_exact( 
@@ -209,6 +209,21 @@ int main(int argc, char** argv)
     
     assert( drift_exact != nullptr );
    } 
+
+    assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
+            ( NUM_OF_BEAM_ELEMENTS*0.75) );
+
+    /* Adding the beam element 'cavity' */
+
+    for( st_block_size_t ii = NUM_OF_BEAM_ELEMENTS*0.75 ; ii < NUM_OF_BEAM_ELEMENTS ; ++ii )
+    {
+      double const voltage = double{ 1e4};
+      double const frequency = double{ 40};
+      double const lag = double{ 0.01L};
+      st_Cavity* cavity = st_Blocks_add_cavity(
+          &beam_elements, voltage, frequency, lag);
+      assert( cavity != nullptr ); /* Otherwise, there was a problem! */
+    }
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 
             ( NUM_OF_BEAM_ELEMENTS) );
     
