@@ -658,7 +658,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
    ////////////////////////// Particles //////////////////////////////// 
     st_block_size_t const NUM_PARTICLE_BLOCKS     = 1u;
-    st_block_size_t const PARTICLES_DATA_CAPACITY = 1048576u*50;
+    st_block_size_t const PARTICLES_DATA_CAPACITY = 1048576u*1000*4; //  ~(4 GB)
     st_block_size_t const NUM_PARTICLES           = atoi(argv[1]); // 100u;
     
     st_Blocks particles_buffer;
