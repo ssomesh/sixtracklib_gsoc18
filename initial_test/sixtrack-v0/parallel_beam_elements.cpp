@@ -322,20 +322,25 @@ int main(int argc, char** argv)
     std::cout.flush();
     
 /************************** Preparing grounds for OpenCL *******/
-    std::vector<cl::Platform> platform;
+     std::vector<cl::Platform> platform;
     cl::Platform::get(&platform);
+//    std::cout << platform.size() << std::endl;
     if(platform.empty()) {
         std::cerr << "OpenCL platforms not found." << std::endl;
         return 1;
       }
      // else std::cout << "Good" << std::endl;
 
+    unsigned platformId = 1; // specifying the platform 
+    assert(platformId < platform.size()); // the platform is a valid one
     // Get all available devices.
     std::vector<cl::Device> devices;
-    for(auto p = platform.begin(); devices.empty() && p != platform.end(); p++) {
+//    for(auto p = platform.begin(); devices.empty() && p != platform.end(); p++) 
+//    {
       std::vector<cl::Device> pldev;
       try {
-        p->getDevices(CL_DEVICE_TYPE_ALL, &pldev);
+        platform[platformId].getDevices(CL_DEVICE_TYPE_ALL, &pldev);
+      //  p->getDevices(CL_DEVICE_TYPE_ALL, &pldev);
         for(auto d = pldev.begin(); d != pldev.end(); d++) {
           if (!d->getInfo<CL_DEVICE_AVAILABLE>()) continue;
           devices.push_back(*d);
@@ -343,7 +348,8 @@ int main(int argc, char** argv)
       } catch(...) {
         devices.clear();
       }
-    }
+//    }
+
 
     if (devices.empty()) {
       std::cerr << "GPUs with double precision not found." << std::endl;
