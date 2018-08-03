@@ -182,7 +182,8 @@ int main(int argc, char** argv)
     {
         double const drift_length = double{ 0.2L };
         st_Drift* drift = st_Blocks_add_drift( &beam_elements, drift_length );
-        
+
+        (void) drift;
         assert( drift != nullptr ); /* Otherwise, there was a problem! */
     }
     

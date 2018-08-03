@@ -463,6 +463,7 @@ int main()
     int ret = st_Blocks_init( &beam_elements, MAX_NUM_BEAM_ELEMENTS, 
                               BEAM_ELEMENTS_DATA_CAPACITY );
     
+    (void) ret;
     assert( ret == 0 ); /* if there was an error, ret would be != 0 */
     
     /* Add NUM_OF_BEAM_ELEMENTS drifts to the buffer. For this example, let's
@@ -472,6 +473,8 @@ int main()
     {
         double const drift_length = double{ 0.2L };
         st_Drift* drift = st_Blocks_add_drift( &beam_elements, drift_length );
+
+        (void) drift;
         
         assert( drift != nullptr ); /* Otherwise, there was a problem! */
     }
@@ -489,6 +492,7 @@ int main()
     st_DriftExact* drift_exact = st_Blocks_add_drift_exact( 
         &beam_elements, double{ 0.1 } );
     
+    (void) drift_exact;
     assert( drift_exact != nullptr );
     
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) == 

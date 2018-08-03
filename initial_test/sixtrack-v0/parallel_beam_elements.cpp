@@ -186,6 +186,8 @@ int main(int argc, char** argv)
         double const drift_length = double{ 0.2L };
         st_Drift* drift = st_Blocks_add_drift( &beam_elements, drift_length );
 
+        (void)drift; // using the variable with a no-op
+
         assert( drift != nullptr ); /* Otherwise, there was a problem! */
     }
 
@@ -204,7 +206,7 @@ int main(int argc, char** argv)
         double const drift_length = double{ 0.1L };
     st_DriftExact* drift_exact = st_Blocks_add_drift_exact(
         &beam_elements, drift_length );
-
+        (void) drift_exact;
     assert( drift_exact != nullptr );
    }
 
@@ -220,6 +222,7 @@ int main(int argc, char** argv)
       double const lag = double{ 0.01L};
       st_Cavity* cavity = st_Blocks_add_cavity(
           &beam_elements, voltage, frequency, lag);
+      (void) cavity; // a no-op
       assert( cavity != nullptr ); /* Otherwise, there was a problem! */
     }
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) ==
@@ -236,6 +239,7 @@ int main(int argc, char** argv)
       double const dy = double{ 0.2L};
       st_Align* align = st_Blocks_add_align(
           &beam_elements, tilt, cos( z ), sin( z ), dx, dy);
+      (void) align; // a no-op
       assert( align != nullptr ); /* Otherwise, there was a problem! */
     }
     assert( st_Blocks_get_num_of_blocks( &beam_elements ) ==

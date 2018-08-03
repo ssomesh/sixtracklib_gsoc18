@@ -115,6 +115,7 @@ int main(int argc, char** argv)
     int ret = st_Blocks_init( &beam_elements, MAX_NUM_BEAM_ELEMENTS, 
                               BEAM_ELEMENTS_DATA_CAPACITY );
     
+    (void)ret; // using the variable with  a no-op
     assert( ret == 0 ); /* if there was an error, ret would be != 0 */
     
     /* Add NUM_OF_BEAM_ELEMENTS drifts to the buffer. For this example, let's
@@ -125,6 +126,7 @@ int main(int argc, char** argv)
         double const drift_length = double{ 0.2L };
         st_Drift* drift = st_Blocks_add_drift( &beam_elements, drift_length );
         
+        (void)drift; // using the variable with  a no-op
         assert( drift != nullptr ); /* Otherwise, there was a problem! */
     }
     
