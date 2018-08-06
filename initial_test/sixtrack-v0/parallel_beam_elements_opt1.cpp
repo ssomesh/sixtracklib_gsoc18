@@ -15,6 +15,12 @@ Multipole for example has additonal data-members and takes more space.
 ***************************************************
 */
 
+/*Optimization:
+1. Have a separate kernel for each of the tracking functions.
+2. move the switch case out of the kernel. i
+3. have the 'for-loop' for the number of turns inside the kernel.
+*/
+
 // The kernel file is "kernels_beam_elements_opt1.cl"
 
 #include <cassert>
@@ -162,19 +168,35 @@ int main(int argc, char** argv)
      * beam elements and particles big enough to avoid running into problems */
 
     constexpr st_block_size_t const MAX_NUM_BEAM_ELEMENTS       = 1000u; // 20u;
-    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 1000u; //9u;
+    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 250u; // number of beam elements of each type. //1000u; //9u;
 
     /* 1MByte is plenty of space */
     constexpr st_block_size_t const BEAM_ELEMENTS_DATA_CAPACITY = 1048576u;
 
-    /* Prepare and init the beam elements buffer */
+    /* Prepare and init the beam elements buffers -- one for each type of beam element */
 
-    st_Blocks beam_elements;
-    st_Blocks_preset( &beam_elements );
+    st_Blocks beam_elements_drift;
+    st_Blocks_preset( &beam_elements_drift );
 
-    int ret = st_Blocks_init( &beam_elements, MAX_NUM_BEAM_ELEMENTS,
+    int ret = st_Blocks_init( &beam_elements_drift, MAX_NUM_BEAM_ELEMENTS,
                               BEAM_ELEMENTS_DATA_CAPACITY );
 
+    st_Blocks beam_elements_drift_exact;
+    st_Blocks_preset( &beam_elements_drift_exact );
+
+    ret |= st_Blocks_init( &beam_elements_drift_exact, MAX_NUM_BEAM_ELEMENTS,
+                              BEAM_ELEMENTS_DATA_CAPACITY );
+
+    st_Blocks beam_elements_cavity;
+    st_Blocks_preset( &beam_elements_cavity );
+
+    ret |= st_Blocks_init( &beam_elements_cavity, MAX_NUM_BEAM_ELEMENTS,
+                              BEAM_ELEMENTS_DATA_CAPACITY );
+    st_Blocks beam_elements_align;
+    st_Blocks_preset( &beam_elements_align );
+
+    ret |= st_Blocks_init( &beam_elements_align, MAX_NUM_BEAM_ELEMENTS,
+                              BEAM_ELEMENTS_DATA_CAPACITY );
     assert( ret == 0 ); /* if there was an error, ret would be != 0 */
 
     /* Add NUM_OF_BEAM_ELEMENTS drifts to the buffer. For this example, let's
