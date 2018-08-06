@@ -882,7 +882,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
     /* on the GPU, these pointers will have __global as a decorator */
 
-#if 1
+#if 0
     // On the CPU after copying the data back from the GPU
     std::cout << "\n On the Host, after applying the drift_track_particles mapping and copying from the GPU\n";
 

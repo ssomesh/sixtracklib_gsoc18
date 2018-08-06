@@ -849,7 +849,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     cl::Event event;
     for( ; belem_it != belem_end ; ++belem_it, ++beam_index )
     {
-      std::cout << std::setw( 6 ) << beam_index << " | type: ";
+//      std::cout << std::setw( 6 ) << beam_index << " | type: ";
 
       auto const type_id = st_BlockInfo_get_type_id( belem_it );
 
@@ -860,7 +860,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
             cl::Kernel track_drift_particle(program, "track_drift_particle");
             blockSize = track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
             numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
-            std::cout << blockSize << " " << numThreads<< std::endl;
+            //std::cout << blockSize << " " << numThreads<< std::endl;
             track_drift_particle.setArg(0,B);
             track_drift_particle.setArg(1,C);
             track_drift_particle.setArg(2,beam_index);
@@ -884,7 +884,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
             cl::Kernel track_drift_exact_particle(program, "track_drift_exact_particle");
             blockSize = track_drift_exact_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
             numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
-            std::cout << blockSize << " " << numThreads<< std::endl;
+            //std::cout << blockSize << " " << numThreads<< std::endl;
             track_drift_exact_particle.setArg(0,B);
             track_drift_exact_particle.setArg(1,C);
             track_drift_exact_particle.setArg(2,beam_index);
@@ -906,7 +906,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
             cl::Kernel track_cavity_particle(program, "track_cavity_particle");
             blockSize = track_cavity_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
             numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
-            std::cout << blockSize << " " << numThreads<< std::endl;
+           // std::cout << blockSize << " " << numThreads<< std::endl;
             track_cavity_particle.setArg(0,B);
             track_cavity_particle.setArg(1,C);
             track_cavity_particle.setArg(2,beam_index);
@@ -929,7 +929,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
             cl::Kernel track_align_particle(program, "track_align_particle");
             blockSize = track_align_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
             numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
-            std::cout << blockSize << " " << numThreads<< std::endl;
+           // std::cout << blockSize << " " << numThreads<< std::endl;
             track_align_particle.setArg(0,B);
             track_align_particle.setArg(1,C);
             track_align_particle.setArg(2,beam_index);
@@ -1066,7 +1066,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
     /* on the GPU, these pointers will have __global as a decorator */
 
-#if 1
+#if 0
     // On the CPU after copying the data back from the GPU
     std::cout << "\n On the Host, after applying the drift_track_particles mapping and copying from the GPU\n";
 
