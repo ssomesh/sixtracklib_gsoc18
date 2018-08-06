@@ -17,7 +17,7 @@ Multipole for example has additonal data-members and takes more space.
 
 /*Optimization:
 1. Have a separate kernel for each of the tracking functions.
-2. move the switch case out of the kernel. i
+2. move the switch case out of the kernel. 
 3. have the 'for-loop' for the number of turns inside the kernel.
 */
 
@@ -168,35 +168,19 @@ int main(int argc, char** argv)
      * beam elements and particles big enough to avoid running into problems */
 
     constexpr st_block_size_t const MAX_NUM_BEAM_ELEMENTS       = 1000u; // 20u;
-    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 250u; // number of beam elements of each type. //1000u; //9u;
+    constexpr st_block_size_t const NUM_OF_BEAM_ELEMENTS        = 1000u; //9u;
 
     /* 1MByte is plenty of space */
     constexpr st_block_size_t const BEAM_ELEMENTS_DATA_CAPACITY = 1048576u;
 
-    /* Prepare and init the beam elements buffers -- one for each type of beam element */
+    /* Prepare and init the beam elements buffer */
 
-    st_Blocks beam_elements_drift;
-    st_Blocks_preset( &beam_elements_drift );
+    st_Blocks beam_elements;
+    st_Blocks_preset( &beam_elements );
 
-    int ret = st_Blocks_init( &beam_elements_drift, MAX_NUM_BEAM_ELEMENTS,
+    int ret = st_Blocks_init( &beam_elements, MAX_NUM_BEAM_ELEMENTS,
                               BEAM_ELEMENTS_DATA_CAPACITY );
-
-    st_Blocks beam_elements_drift_exact;
-    st_Blocks_preset( &beam_elements_drift_exact );
-
-    ret |= st_Blocks_init( &beam_elements_drift_exact, MAX_NUM_BEAM_ELEMENTS,
-                              BEAM_ELEMENTS_DATA_CAPACITY );
-
-    st_Blocks beam_elements_cavity;
-    st_Blocks_preset( &beam_elements_cavity );
-
-    ret |= st_Blocks_init( &beam_elements_cavity, MAX_NUM_BEAM_ELEMENTS,
-                              BEAM_ELEMENTS_DATA_CAPACITY );
-    st_Blocks beam_elements_align;
-    st_Blocks_preset( &beam_elements_align );
-
-    ret |= st_Blocks_init( &beam_elements_align, MAX_NUM_BEAM_ELEMENTS,
-                              BEAM_ELEMENTS_DATA_CAPACITY );
+    (void)ret;
     assert( ret == 0 ); /* if there was an error, ret would be != 0 */
 
     /* Add NUM_OF_BEAM_ELEMENTS drifts to the buffer. For this example, let's
@@ -514,13 +498,20 @@ int main(int argc, char** argv)
 //   /* This gets rid of the "unused variable" warning/error until you actually use particles */
 //   ( void )particles;
 
-
+   const int QUARTER_NUM_OF_BEAM_ELEMENTS = (int)NUM_OF_BEAM_ELEMENTS/4;
   // Allocate device buffers and transfer input data to device.
 //  cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
 //      copy_buffer.size() * sizeof(uint8_t), copy_buffer.data()); // input vector
-    cl::Buffer B(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements  )); // input vector
-queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements ), st_Blocks_get_const_data_begin( &beam_elements ) );
+    cl::Buffer B(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements )/4); // input vector for drift
+    cl::Buffer D(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements )/4); // input vector for drift_exact
+    cl::Buffer E(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements )/4); // input vector for cavity
+    cl::Buffer F(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements )/4); // input vector for align
 
+queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements )/4, st_Blocks_get_const_data_begin( &beam_elements ) );
+queue.enqueueWriteBuffer( D, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements )/4, st_Blocks_get_const_data_begin( &beam_elements)+(QUARTER_NUM_OF_BEAM_ELEMENTS ) );
+queue.enqueueWriteBuffer( E, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements )/4, st_Blocks_get_const_data_begin( &beam_elements)+(2*QUARTER_NUM_OF_BEAM_ELEMENTS ) );
+queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements )/4, st_Blocks_get_const_data_begin( &beam_elements)+(3*QUARTER_NUM_OF_BEAM_ELEMENTS)) ;
+//
 //    int numThreads = 1;
 //    int blockSize = 1;
 //    cl::Kernel unserialize(program, "unserialize");
@@ -779,8 +770,11 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     int blockSize = 1;
     cl::Kernel unserialize(program, "unserialize");
     unserialize.setArg(0,B);
-    unserialize.setArg(1,C);
-    unserialize.setArg(2,NUM_PARTICLES);
+    unserialize.setArg(1,D);
+    unserialize.setArg(2,E);
+    unserialize.setArg(3,F);
+    unserialize.setArg(4,C);
+    unserialize.setArg(5,NUM_PARTICLES);
     queue.enqueueNDRangeKernel(
     unserialize, cl::NullRange, cl::NDRange( numThreads ),
     cl::NDRange(blockSize ));
@@ -893,6 +887,53 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
           average_execution_time += (kernel_time_elapsed - average_execution_time)/num_of_turns;
       }
 
+    cl::Kernel track_drift_exact_particle(program, "track_drift_exact_particle");
+    blockSize = track_drift_exact_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
+    track_drift_exact_particle.setArg(0,D);
+    track_drift_exact_particle.setArg(1,C);
+    track_drift_exact_particle.setArg(2,NUM_PARTICLES);
+    track_drift_exact_particle.setArg(3,NUM_TURNS);
+    queue.enqueueNDRangeKernel(
+    track_drift_exact_particle, cl::NullRange, cl::NDRange( numThreads ),
+    cl::NDRange(blockSize ), nullptr, &event);
+    queue.flush();
+    event.wait();
+    queue.finish();
+
+    cl::Kernel track_cavity_particle(program, "track_cavity_particle");
+    blockSize = track_cavity_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
+    track_cavity_particle.setArg(0,E);
+    track_cavity_particle.setArg(1,C);
+    track_cavity_particle.setArg(2,NUM_PARTICLES);
+    track_cavity_particle.setArg(3,NUM_TURNS);
+    queue.enqueueNDRangeKernel(
+    track_cavity_particle, cl::NullRange, cl::NDRange( numThreads ),
+    cl::NDRange(blockSize ), nullptr, &event);
+    queue.flush();
+    event.wait();
+    queue.finish();
+
+    cl::Kernel track_align_particle(program, "track_align_particle");
+    blockSize = track_align_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
+    track_align_particle.setArg(0,F);
+    track_align_particle.setArg(1,C);
+    track_align_particle.setArg(2,NUM_PARTICLES);
+    track_align_particle.setArg(3,NUM_TURNS);
+    queue.enqueueNDRangeKernel(
+    track_align_particle, cl::NullRange, cl::NDRange( numThreads ),
+    cl::NDRange(blockSize ), nullptr, &event);
+    queue.flush();
+    event.wait();
+    queue.finish();
+
+
+
       queue.enqueueReadBuffer(C, CL_TRUE, 0, copy_particles_buffer_host.size() * sizeof(uint8_t), copy_particles_buffer_host.data());
       queue.flush();
 
@@ -904,7 +945,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
     /* on the GPU, these pointers will have __global as a decorator */
 
-#if 0
+#if 1
     // On the CPU after copying the data back from the GPU
     std::cout << "\n On the Host, after applying the drift_track_particles mapping and copying from the GPU\n";
 
