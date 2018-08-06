@@ -15,7 +15,13 @@ Multipole for example has additonal data-members and takes more space.
 ***************************************************
 */
 
-// The kernel file is "kernels_beam_elements.cl"
+/*Optimization:
+1. Have a separate kernel for each of the tracking functions.
+2. move the switch case out of the kernel. 
+3. have the 'for-loop' for the number of turns inside the kernel.
+*/
+
+// The kernel file is "kernels_beam_elements_opt2.cl"
 
 #include <cassert>
 #include <cstdint>
@@ -153,8 +159,8 @@ int main(int argc, char** argv)
           exit(1);
         }
   		int NUM_REPETITIONS = 15;//1010; // for benchmarking
-    	double num_of_turns = 0.0; // for timing
-    	double average_execution_time = 0.0;
+//    	double num_of_turns = 0.0; // for timing
+//    	double average_execution_time = 0.0;
 
 			for(int ll = 0; ll < NUM_REPETITIONS; ++ll) {
     /* We will use 9+ beam element blocks in this example and do not
@@ -175,6 +181,7 @@ int main(int argc, char** argv)
     int ret = st_Blocks_init( &beam_elements, MAX_NUM_BEAM_ELEMENTS,
                               BEAM_ELEMENTS_DATA_CAPACITY );
 
+    (void)ret;
     assert( ret == 0 ); /* if there was an error, ret would be != 0 */
 
     /* Add NUM_OF_BEAM_ELEMENTS drifts to the buffer. For this example, let's
@@ -409,7 +416,7 @@ int main(int argc, char** argv)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // getting the kernel file
    std::string PATH_TO_KERNEL_FILE( st_PATH_TO_BASE_DIR );
-       PATH_TO_KERNEL_FILE += "../kernels_beam_elements.cl";
+       PATH_TO_KERNEL_FILE += "../kernels_beam_elements_opt2.cl";
 
        std::string kernel_source( "" );
        std::ifstream kernel_file( PATH_TO_KERNEL_FILE.c_str(),
@@ -826,15 +833,137 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 //       In the body of the kernel, unserialize the work-item private NS(Block) instance of Particles, beam_elements and then use these instances.
 
     SIXTRL_UINT64_T const NUM_TURNS = 100;
+    st_block_size_t beam_index = 0;
 
+#if 1   
+    // SIXTRL_UINT64_T beam_index = 500;
+
+    /* Generate an iterator range over all the stored Blocks: */
+
+    st_BlockInfo const* belem_it  =
+      st_Blocks_get_const_block_infos_begin( &beam_elements );
+
+    st_BlockInfo const* belem_end =
+      st_Blocks_get_const_block_infos_end( &beam_elements );
+
+    cl::Event event;
+    for( ; belem_it != belem_end ; ++belem_it, ++beam_index )
+    {
+      std::cout << std::setw( 6 ) << beam_index << " | type: ";
+
+      auto const type_id = st_BlockInfo_get_type_id( belem_it );
+
+      switch( type_id )
+      {
+        case st_BLOCK_TYPE_DRIFT:
+          {
+            cl::Kernel track_drift_particle(program, "track_drift_particle");
+            blockSize = track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+            numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+            std::cout << blockSize << " " << numThreads<< std::endl;
+            track_drift_particle.setArg(0,B);
+            track_drift_particle.setArg(1,C);
+            track_drift_particle.setArg(2,beam_index);
+            track_drift_particle.setArg(3,NUM_PARTICLES);
+            track_drift_particle.setArg(4,NUM_TURNS);
+
+
+
+            queue.enqueueNDRangeKernel(
+                track_drift_particle, cl::NullRange, cl::NDRange( numThreads ),
+                cl::NDRange(blockSize ), nullptr, &event);
+            queue.flush();
+            event.wait();
+            queue.finish();
+            break;
+          }
+
+        case st_BLOCK_TYPE_DRIFT_EXACT:
+          {
+
+            cl::Kernel track_drift_exact_particle(program, "track_drift_exact_particle");
+            blockSize = track_drift_exact_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+            numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+            std::cout << blockSize << " " << numThreads<< std::endl;
+            track_drift_exact_particle.setArg(0,B);
+            track_drift_exact_particle.setArg(1,C);
+            track_drift_exact_particle.setArg(2,beam_index);
+            track_drift_exact_particle.setArg(3,NUM_PARTICLES);
+            track_drift_exact_particle.setArg(4,NUM_TURNS);
+
+            queue.enqueueNDRangeKernel(
+                track_drift_exact_particle, cl::NullRange, cl::NDRange( numThreads ),
+                cl::NDRange(blockSize ), nullptr, &event);
+            queue.flush();
+            event.wait();
+            queue.finish();
+
+            break;
+          }
+        case st_BLOCK_TYPE_CAVITY:
+          {
+            // enquing the cavity kernel
+            cl::Kernel track_cavity_particle(program, "track_cavity_particle");
+            blockSize = track_cavity_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+            numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+            std::cout << blockSize << " " << numThreads<< std::endl;
+            track_cavity_particle.setArg(0,B);
+            track_cavity_particle.setArg(1,C);
+            track_cavity_particle.setArg(2,beam_index);
+            track_cavity_particle.setArg(3,NUM_PARTICLES);
+            track_cavity_particle.setArg(4,NUM_TURNS);
+
+            queue.enqueueNDRangeKernel(
+                track_cavity_particle, cl::NullRange, cl::NDRange( numThreads ),
+                cl::NDRange(blockSize ), nullptr, &event);
+            queue.flush();
+            event.wait();
+            queue.finish();
+
+            break;
+          }
+
+        case st_BLOCK_TYPE_ALIGN:
+          {
+            // enquing the align kernel
+            cl::Kernel track_align_particle(program, "track_align_particle");
+            blockSize = track_align_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+            numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+            std::cout << blockSize << " " << numThreads<< std::endl;
+            track_align_particle.setArg(0,B);
+            track_align_particle.setArg(1,C);
+            track_align_particle.setArg(2,beam_index);
+            track_align_particle.setArg(3,NUM_PARTICLES);
+            track_align_particle.setArg(4,NUM_TURNS);
+
+            queue.enqueueNDRangeKernel(
+                track_align_particle, cl::NullRange, cl::NDRange( numThreads ),
+                cl::NDRange(blockSize ), nullptr, &event);
+            queue.flush();
+            event.wait();
+            queue.finish();
+            break;
+          }
+
+        default:
+          {
+            std::cout << "unknown     | --> skipping\r\n";
+          }
+      };
+    }
+#endif
+
+# if 0
+//invoking  the different kernels
     cl::Kernel track_drift_particle(program, "track_drift_particle");
     blockSize = track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
     numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
     std::cout << blockSize << " " << numThreads<< std::endl;
     track_drift_particle.setArg(0,B);
     track_drift_particle.setArg(1,C);
-    track_drift_particle.setArg(2,NUM_PARTICLES);
-    track_drift_particle.setArg(3,NUM_TURNS);
+    track_drift_particle.setArg(2,beam_index);
+    track_drift_particle.setArg(3,NUM_PARTICLES);
+    track_drift_particle.setArg(4,NUM_TURNS);
 
 
     cl::Event event;
@@ -870,6 +999,61 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
           num_of_turns += 1.0;
           average_execution_time += (kernel_time_elapsed - average_execution_time)/num_of_turns;
       }
+
+    // enquing the drift_exact kernel
+    cl::Kernel track_drift_exact_particle(program, "track_drift_exact_particle");
+    blockSize = track_drift_exact_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
+    track_drift_exact_particle.setArg(0,B);
+    track_drift_exact_particle.setArg(1,C);
+    track_drift_exact_particle.setArg(2,beam_index);
+    track_drift_exact_particle.setArg(3,NUM_PARTICLES);
+    track_drift_exact_particle.setArg(4,NUM_TURNS);
+
+    queue.enqueueNDRangeKernel(
+    track_drift_exact_particle, cl::NullRange, cl::NDRange( numThreads ),
+    cl::NDRange(blockSize ), nullptr, &event);
+    queue.flush();
+    event.wait();
+    queue.finish();
+
+    // enquing the cavity kernel
+    cl::Kernel track_cavity_particle(program, "track_cavity_particle");
+    blockSize = track_cavity_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
+    track_cavity_particle.setArg(0,B);
+    track_cavity_particle.setArg(1,C);
+    track_cavity_particle.setArg(2,beam_index);
+    track_cavity_particle.setArg(3,NUM_PARTICLES);
+    track_cavity_particle.setArg(4,NUM_TURNS);
+
+    queue.enqueueNDRangeKernel(
+    track_cavity_particle, cl::NullRange, cl::NDRange( numThreads ),
+    cl::NDRange(blockSize ), nullptr, &event);
+    queue.flush();
+    event.wait();
+    queue.finish();
+
+    // enquing the align kernel
+    cl::Kernel track_align_particle(program, "track_align_particle");
+    blockSize = track_align_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
+    track_align_particle.setArg(0,B);
+    track_align_particle.setArg(1,C);
+    track_align_particle.setArg(2,beam_index);
+    track_align_particle.setArg(3,NUM_PARTICLES);
+    track_align_particle.setArg(4,NUM_TURNS);
+
+    queue.enqueueNDRangeKernel(
+    track_align_particle, cl::NullRange, cl::NDRange( numThreads ),
+    cl::NDRange(blockSize ), nullptr, &event);
+    queue.flush();
+    event.wait();
+    queue.finish();
+#endif
 
       queue.enqueueReadBuffer(C, CL_TRUE, 0, copy_particles_buffer_host.size() * sizeof(uint8_t), copy_particles_buffer_host.data());
       queue.flush();
@@ -920,7 +1104,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     st_Blocks_free( &particles_buffer );
     st_Blocks_free( &copy_particles_buffer );
   } // end of the NUM_REPETITIONS 'for' loop
-		printf("Reference Version: Time = %.3f s; \n",average_execution_time*1.0e-9);
+//		printf("Reference Version: Time = %.3f s; \n",average_execution_time*1.0e-9);
     return 0;
 
   }
