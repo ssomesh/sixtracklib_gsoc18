@@ -69,6 +69,17 @@ set_property( TARGET parallel_beam_elements_opt2 PROPERTY COMPILE_OPTIONS -Wall 
 
 #-------------------------------------------------------------------
 
+# parallel_beam_elements_opt3
+
+add_executable( parallel_beam_elements_opt3 parallel_beam_elements_opt3.cpp )
+             
+target_link_libraries( parallel_beam_elements_opt3 SixTracklib::sixtrack ${OpenCL_LIBRARY} )
+
+set_property( TARGET parallel_beam_elements_opt3 PROPERTY CXX_STANDARD 11 )
+set_property( TARGET parallel_beam_elements_opt3 PROPERTY CXX_STANDARD_REQUIRED ON )
+set_property( TARGET parallel_beam_elements_opt3 PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic -g) 
+
+#-------------------------------------------------------------------
 #sequential drift_cpu
 
 add_executable( drift_cpu drift_cpu.cpp )
