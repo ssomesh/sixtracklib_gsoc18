@@ -833,12 +833,15 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 //       In the body of the kernel, unserialize the work-item private NS(Block) instance of Particles, beam_elements and then use these instances.
 
     SIXTRL_UINT64_T const NUM_TURNS = 100;
-    st_block_size_t beam_index = 0;
 
 #if 1   
+    
     // SIXTRL_UINT64_T beam_index = 500;
+    for(size_t nt=0; nt < NUM_TURNS; ++nt) {
+    st_block_size_t beam_index = 0;
 
     /* Generate an iterator range over all the stored Blocks: */
+
 
     st_BlockInfo const* belem_it  =
       st_Blocks_get_const_block_infos_begin( &beam_elements );
@@ -951,6 +954,7 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
           }
       };
     }
+    } // end of for loop for NUM_TURNS
 #endif
 
 # if 0

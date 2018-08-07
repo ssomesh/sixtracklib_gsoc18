@@ -77,6 +77,7 @@ kernel void track_drift_particle(
       NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );
       switch( type_id )
       {
+#if 1
         case st_BLOCK_TYPE_DRIFT:
           {
             __global st_Drift const* drift = 
@@ -102,6 +103,7 @@ kernel void track_drift_particle(
             particles->sigma[ ii ] = sigma;
             break;
           }
+#endif
         case st_BLOCK_TYPE_DRIFT_EXACT:
           {
             __global st_DriftExact const* drift_exact = 
@@ -139,6 +141,7 @@ kernel void track_drift_particle(
             break;
           }
 
+#if 1
         case st_BLOCK_TYPE_CAVITY:
           {
             __global st_Cavity const* cavity = 
@@ -212,6 +215,7 @@ kernel void track_drift_particle(
           {
             printf("unknown     | --> skipping\n");
           }
+#endif
       };
     }
   }
