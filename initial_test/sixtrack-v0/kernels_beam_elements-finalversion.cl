@@ -31,10 +31,9 @@ kernel void unserialize(
 }
 
 
-kernel void track_drift_particle(
+kernel void track_beam_particle(
     global uchar *copy_buffer, // uint8_t is uchar
     global uchar *copy_buffer_particles, // uint8_t is uchar
-    ulong BEAM_INDEX,
     ulong NUM_PARTICLES,
     ulong NUM_TURNS // number of times a particle is mapped over each of the beam_elements
     )
@@ -61,19 +60,26 @@ kernel void track_drift_particle(
   NS(Blocks_preset)( &copied_beam_elements ); // very important for initialization
   ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);
 
-  SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1;
+  SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1u;
   SIXTRL_STATIC SIXTRL_REAL_T const ONE_HALF = ( SIXTRL_REAL_T )0.5L;
 
   // for each particle we apply the beam_elements, as applicable (decided by the switch case)
 
+  for (size_t nt=0; nt < NUM_TURNS; ++nt) {
     SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
       st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
     SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
       st_Blocks_get_const_block_infos_end( &copied_beam_elements );
-     
-      belem_it += BEAM_INDEX; // 5 here is the index in the 'copied_beam_elements' 
+
+    for( ; belem_it != belem_end ; ++belem_it )
+    {
       st_BlockInfo const info = *belem_it;
       NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );
+      switch( type_id )
+      {
+#if 1
+        case st_BLOCK_TYPE_DRIFT:
+          {
             __global st_Drift const* drift = 
               st_Blocks_get_const_drift( &info );
             st_Drift const drift_private = *drift;
@@ -95,57 +101,16 @@ kernel void track_drift_particle(
             particles->x[ ii ] = x;
             particles->y[ ii ] = y;
             particles->sigma[ ii ] = sigma;
-
-};
-
-kernel void track_drift_exact_particle(
-    global uchar *copy_buffer, // uint8_t is uchar
-    global uchar *copy_buffer_particles, // uint8_t is uchar
-    ulong BEAM_INDEX,
-    ulong NUM_PARTICLES,
-    ulong NUM_TURNS // number of times a particle is mapped over each of the beam_elements
-    )
-{
-  NS(block_num_elements_t) ii = get_global_id(0);
-  if(ii >= NUM_PARTICLES) return;
-
-  /* For the particles */
-  NS(Blocks) copied_particles_buffer;
-  NS(Blocks_preset) (&copied_particles_buffer);
-
-  int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);
-  SIXTRL_GLOBAL_DEC st_BlockInfo const* it  =  // is 'it' pointing to the outer particles? check.
-    st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );
-  SIXTRL_GLOBAL_DEC NS(Particles) const* particles = 
-    ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin; 
-
-  // *particles now points to the first 'outer' particle
-  // @ Assuming only a single outer particle
-  // each 'ii' refers to an inner particle
-
-  /* for the beam element */
-  NS(Blocks) copied_beam_elements;
-  NS(Blocks_preset)( &copied_beam_elements ); // very important for initialization
-  ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);
-
-//  SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1;
-//  SIXTRL_STATIC SIXTRL_REAL_T const ONE_HALF = ( SIXTRL_REAL_T )0.5L;
-
-  // for each particle we apply the beam_elements, as applicable (decided by the switch case)
-
-    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
-      st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
-    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
-      st_Blocks_get_const_block_infos_end( &copied_beam_elements );
-     
-      belem_it += BEAM_INDEX; // 5 here is the index in the 'copied_beam_elements' 
-      st_BlockInfo const info = *belem_it;
-      NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );
+            break;
+          }
+#endif
+        case st_BLOCK_TYPE_DRIFT_EXACT:
+          {
             __global st_DriftExact const* drift_exact = 
               st_Blocks_get_const_drift_exact( &info );
             st_DriftExact const drift_exact_private = *drift_exact;
 
-            SIXTRL_STATIC SIXTRL_REAL_T const ONE = ( SIXTRL_REAL_T )1u;
+            // SIXTRL_STATIC SIXTRL_REAL_T const ONE = ( SIXTRL_REAL_T )1u;
 
             SIXTRL_REAL_T const length = NS(DriftExact_get_length)( &drift_exact_private );
             SIXTRL_REAL_T const delta  = particles->delta[ii];
@@ -157,9 +122,6 @@ kernel void track_drift_exact_particle(
             SIXTRL_REAL_T const opd   = delta + ONE;
             SIXTRL_REAL_T const lpzi  = ( length ) / 
               sqrt( opd * opd - px * px - py * py );
-            
-            if((opd * opd - px * px - py * py) == 0) 
-              printf("zero encountered!!");
 
             SIXTRL_REAL_T const lbzi  = ( beta0 * beta0 * sigma + ONE ) * lpzi;
 
@@ -176,57 +138,17 @@ kernel void track_drift_exact_particle(
             particles->x[ ii ] = x;
             particles->y[ ii ] = y;
             particles->sigma[ ii ] = sigma;
+            break;
+          }
 
-};
-
-kernel void track_cavity_particle(
-    global uchar *copy_buffer, // uint8_t is uchar
-    global uchar *copy_buffer_particles, // uint8_t is uchar
-    ulong BEAM_INDEX,
-    ulong NUM_PARTICLES,
-    ulong NUM_TURNS // number of times a particle is mapped over each of the beam_elements
-    )
-{
-  NS(block_num_elements_t) ii = get_global_id(0);
-  if(ii >= NUM_PARTICLES) return;
-
-  /* For the particles */
-  NS(Blocks) copied_particles_buffer;
-  NS(Blocks_preset) (&copied_particles_buffer);
-
-  int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);
-  SIXTRL_GLOBAL_DEC st_BlockInfo const* it  =  // is 'it' pointing to the outer particles? check.
-    st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );
-  SIXTRL_GLOBAL_DEC NS(Particles) const* particles = 
-    ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin; 
-
-  // *particles now points to the first 'outer' particle
-  // @ Assuming only a single outer particle
-  // each 'ii' refers to an inner particle
-
-  /* for the beam element */
-  NS(Blocks) copied_beam_elements;
-  NS(Blocks_preset)( &copied_beam_elements ); // very important for initialization
-  ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);
-
-//  SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1;
-//  SIXTRL_STATIC SIXTRL_REAL_T const ONE_HALF = ( SIXTRL_REAL_T )0.5L;
-
-  // for each particle we apply the beam_elements, as applicable (decided by the switch case)
-
-    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
-      st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
-    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
-      st_Blocks_get_const_block_infos_end( &copied_beam_elements );
-     
-      belem_it += BEAM_INDEX; // 5 here is the index in the 'copied_beam_elements' 
-      st_BlockInfo const info = *belem_it;
-      NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );
+#if 1
+        case st_BLOCK_TYPE_CAVITY:
+          {
             __global st_Cavity const* cavity = 
               st_Blocks_get_const_cavity( &info );
             st_Cavity const cavity_private = *cavity;
 
-            SIXTRL_STATIC_VAR SIXTRL_REAL_T const ONE  = ( SIXTRL_REAL_T )1.0L;
+            // SIXTRL_STATIC_VAR SIXTRL_REAL_T const ONE  = ( SIXTRL_REAL_T )1.0L;
             SIXTRL_STATIC_VAR SIXTRL_REAL_T const TWO  = ( SIXTRL_REAL_T )2.0L;
             SIXTRL_STATIC_VAR SIXTRL_REAL_T const PI   =
               ( SIXTRL_REAL_T )3.1415926535897932384626433832795028841971693993751L;
@@ -258,57 +180,11 @@ kernel void track_cavity_particle(
             particles->delta[ii] = opd - ONE;
             particles->rpp[ii] = ONE  / opd ;
             particles->rvv[ii] = beta0 / beta;
-            if(beta == 0 || opd == 0) 
-              printf("zero encountered again!");
 
-
-};
-
-kernel void track_align_particle(
-    global uchar *copy_buffer, // uint8_t is uchar
-    global uchar *copy_buffer_particles, // uint8_t is uchar
-    ulong BEAM_INDEX,
-    ulong NUM_PARTICLES,
-    ulong NUM_TURNS // number of times a particle is mapped over each of the beam_elements
-    )
-{
-  NS(block_num_elements_t) ii = get_global_id(0);
-  if(ii >= NUM_PARTICLES) return;
-
-  /* For the particles */
-  NS(Blocks) copied_particles_buffer;
-  NS(Blocks_preset) (&copied_particles_buffer);
-
-  int ret = NS(Blocks_unserialize)(&copied_particles_buffer, copy_buffer_particles);
-  SIXTRL_GLOBAL_DEC st_BlockInfo const* it  =  // is 'it' pointing to the outer particles? check.
-    st_Blocks_get_const_block_infos_begin( &copied_particles_buffer );
-  SIXTRL_GLOBAL_DEC NS(Particles) const* particles = 
-    ( SIXTRL_GLOBAL_DEC st_Particles const* )it->begin; 
-
-  // *particles now points to the first 'outer' particle
-  // @ Assuming only a single outer particle
-  // each 'ii' refers to an inner particle
-
-  /* for the beam element */
-  NS(Blocks) copied_beam_elements;
-  NS(Blocks_preset)( &copied_beam_elements ); // very important for initialization
-  ret = NS(Blocks_unserialize)(&copied_beam_elements, copy_buffer);
-
-//  SIXTRL_STATIC SIXTRL_REAL_T const ONE      = ( SIXTRL_REAL_T )1;
-//  SIXTRL_STATIC SIXTRL_REAL_T const ONE_HALF = ( SIXTRL_REAL_T )0.5L;
-
-  // for each particle we apply the beam_elements, as applicable (decided by the switch case)
-
-    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
-      st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
-    SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
-      st_Blocks_get_const_block_infos_end( &copied_beam_elements );
-     
-      belem_it += BEAM_INDEX; // BEAM_INDEX here is the index in the 'copied_beam_elements' 
-      st_BlockInfo const info = *belem_it;
-      NS(BlockType) const type_id =  st_BlockInfo_get_type_id(&info );
-
-
+            break;
+          }
+        case st_BLOCK_TYPE_ALIGN:
+          {
             __global st_Align const* align = 
               st_Blocks_get_const_align( &info );
             st_Align const align_private = *align;
@@ -332,6 +208,17 @@ kernel void track_align_particle(
             particles->px[ii] = px;
             particles->py[ii] = py;
 
+            break;
+          }
+
+        default:
+          {
+            printf("unknown     | --> skipping\n");
+          }
+#endif
+      };
+    }
+  }
 
 };
 

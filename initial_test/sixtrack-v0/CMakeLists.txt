@@ -90,3 +90,15 @@ set_property( TARGET drift_cpu PROPERTY CXX_STANDARD_REQUIRED ON )
 set_property( TARGET drift_cpu PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic )
 #-------------------------------------------------------------------
 
+# parallel_beam_elements-finalversion
+
+add_executable( parallel_beam_elements-finalversion parallel_beam_elements-finalversion.cpp )
+             
+target_link_libraries( parallel_beam_elements-finalversion SixTracklib::sixtrack ${OpenCL_LIBRARY} )
+
+set_property( TARGET parallel_beam_elements-finalversion PROPERTY CXX_STANDARD 11 )
+set_property( TARGET parallel_beam_elements-finalversion PROPERTY CXX_STANDARD_REQUIRED ON )
+set_property( TARGET parallel_beam_elements-finalversion PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic) 
+
+
+#-------------------------------------------------------------------
