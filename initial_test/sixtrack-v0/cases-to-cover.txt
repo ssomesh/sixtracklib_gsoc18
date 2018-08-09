@@ -1,0 +1,27 @@
+In order to study the warmup effect:
+
+
+1. have separate kernels for each of the tracking functions with just one switch case inside each.
+   
+   First call only one of them at a time.
+   Time each of these kernels and keep their timing values in a vector to study the warmup effect.
+   Then call them one after the other in a sequence.
+   Have only 250 beam elements.
+
+2. have one consolidated kernel with all tracking functions.
+   
+   Call the kernel multiple times and store the time values for each of them.
+   There would be 250 beam elements of each type.
+
+3. in the case where the switch case is moved out of the kernel
+
+   First call only one kernel at a time, with 250 beam elements
+   Time each of the kernels and keep their timing values in a vector to study the warmup effect.
+   Then call each of them all of them. Time those as well.
+
+
+Pass the number of turns as a command line argument aloong with the number of particles.
+Adjust the number of turns such that for certain number of particles, the time of execution is appreciable.
+
+
+For the purpose of plotting, plot the exection time for particles in the range 1000 -- 100000 separately and for 10000 -- 25000000 separately
