@@ -102,3 +102,15 @@ set_property( TARGET parallel_beam_elements-finalversion PROPERTY COMPILE_OPTION
 
 
 #-------------------------------------------------------------------
+# parallel_beam_elements_oneatatime
+
+add_executable( parallel_beam_elements_oneatatime parallel_beam_elements_oneatatime.cpp )
+             
+target_link_libraries( parallel_beam_elements_oneatatime SixTracklib::sixtrack ${OpenCL_LIBRARY} )
+
+set_property( TARGET parallel_beam_elements_oneatatime PROPERTY CXX_STANDARD 11 )
+set_property( TARGET parallel_beam_elements_oneatatime PROPERTY CXX_STANDARD_REQUIRED ON )
+set_property( TARGET parallel_beam_elements_oneatatime PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic) 
+
+
+#-------------------------------------------------------------------
