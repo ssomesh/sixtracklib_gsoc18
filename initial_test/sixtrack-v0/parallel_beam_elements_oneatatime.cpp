@@ -894,10 +894,10 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_drift.push_back(kernel_time_elapsed);
-       // if( ll > 5 ) {
+        if( ll > 5 ) {
           num_of_turns += 1.0;
           average_execution_time_drift += (kernel_time_elapsed - average_execution_time_drift)/num_of_turns;
-     // }
+      }
       break;
     }
     case 2:
@@ -941,10 +941,10 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_drift_exact.push_back(kernel_time_elapsed);
-      //  if( ll > 5 ) {
+        if( ll > 5 ) {
           num_of_turns += 1.0;
           average_execution_time_drift_exact += (kernel_time_elapsed - average_execution_time_drift_exact)/num_of_turns;
-    //  }
+      }
     break;
     }
     case 3:
@@ -987,10 +987,10 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_cavity.push_back(kernel_time_elapsed);
-     //   if( ll > 5 ) {
+        if( ll > 5 ) {
           num_of_turns += 1.0;
           average_execution_time_cavity += (kernel_time_elapsed - average_execution_time_cavity)/num_of_turns;
-     // }
+      }
     break;
     }
     case 4:
@@ -1033,10 +1033,10 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_align.push_back(kernel_time_elapsed);
-        //if( ll > 5 ) {
+        if( ll > 5 ) {
           num_of_turns += 1.0;
           average_execution_time_align += (kernel_time_elapsed - average_execution_time_align)/num_of_turns;
-      //}
+      }
     break;
     }
  }; // end of switch case
