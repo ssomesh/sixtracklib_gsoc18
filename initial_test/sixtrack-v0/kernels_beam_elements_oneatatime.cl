@@ -74,7 +74,7 @@ kernel void track_drift_particle(
       st_Blocks_get_const_block_infos_end( &copied_beam_elements );
 
     belem_it +=offset;
-    belem_end = belem_it + offset;
+    belem_end = belem_it + 250;
     for( ; belem_it != belem_end ; ++belem_it )
     {
       st_BlockInfo const info = *belem_it;
@@ -155,7 +155,7 @@ kernel void track_drift_exact_particle(
       st_Blocks_get_const_block_infos_end( &copied_beam_elements ) ;
 
     belem_it +=offset;
-    belem_end = belem_it + offset;
+    belem_end = belem_it + 250;
     for( ; belem_it != belem_end ; ++belem_it )
     {
       st_BlockInfo const info = *belem_it;
@@ -247,6 +247,7 @@ kernel void track_cavity_particle(
       st_Blocks_get_const_block_infos_end( &copied_beam_elements ) ;
     
     belem_it +=offset;
+    belem_end = belem_it + 250;
 
     for( ; belem_it != belem_end ; ++belem_it )
     {
@@ -343,6 +344,7 @@ kernel void track_align_particle(
       st_Blocks_get_const_block_infos_end( &copied_beam_elements );
 
     belem_it +=offset;
+
     for( ; belem_it != belem_end ; ++belem_it )
     {
       st_BlockInfo const info = *belem_it;
