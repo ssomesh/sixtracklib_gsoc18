@@ -153,7 +153,10 @@ int main(int argc, char** argv)
           exit(1);
         }
   		int NUM_REPETITIONS = 10;//1010; // for benchmarking
-    	double num_of_turns = 0.0; // for timing
+    	double num_of_turns_drift = 0.0; // for timing
+    	double num_of_turns_drift_exact = 0.0; // for timing
+    	double num_of_turns_cavity = 0.0; // for timing
+    	double num_of_turns_align = 0.0; // for timing
     	double average_execution_time_drift = 0.0;
     	double average_execution_time_drift_exact = 0.0;
     	double average_execution_time_cavity = 0.0;
@@ -895,8 +898,8 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_drift.push_back(kernel_time_elapsed);
        // if( ll > 5 ) {
-          num_of_turns += 1.0;
-          average_execution_time_drift += (kernel_time_elapsed - average_execution_time_drift)/num_of_turns;
+          num_of_turns_drift += 1.0;
+          average_execution_time_drift += (kernel_time_elapsed - average_execution_time_drift)/num_of_turns_drift;
      // }
       break;
     }
@@ -942,8 +945,8 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_drift_exact.push_back(kernel_time_elapsed);
       //  if( ll > 5 ) {
-          num_of_turns += 1.0;
-          average_execution_time_drift_exact += (kernel_time_elapsed - average_execution_time_drift_exact)/num_of_turns;
+          num_of_turns_drift_exact += 1.0;
+          average_execution_time_drift_exact += (kernel_time_elapsed - average_execution_time_drift_exact)/num_of_turns_drift_exact;
     //  }
     break;
     }
@@ -988,8 +991,8 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_cavity.push_back(kernel_time_elapsed);
      //   if( ll > 5 ) {
-          num_of_turns += 1.0;
-          average_execution_time_cavity += (kernel_time_elapsed - average_execution_time_cavity)/num_of_turns;
+          num_of_turns_cavity += 1.0;
+          average_execution_time_cavity += (kernel_time_elapsed - average_execution_time_cavity)/num_of_turns_cavity;
      // }
     break;
     }
@@ -1034,8 +1037,8 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_align.push_back(kernel_time_elapsed);
         //if( ll > 5 ) {
-          num_of_turns += 1.0;
-          average_execution_time_align += (kernel_time_elapsed - average_execution_time_align)/num_of_turns;
+          num_of_turns_align += 1.0;
+          average_execution_time_align += (kernel_time_elapsed - average_execution_time_align)/num_of_turns_align;
       //}
     break;
     }
@@ -1095,28 +1098,28 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     {
       // printing the contents of the exec_time vector
     for(std::vector<double>::iterator it = exec_time_drift.begin(); it != exec_time_drift.end(); ++it)
-      printf("%.3f s%c",*it, ",\n"[it+1 == exec_time_drift.end()]);
+      printf("%.3f s%c",(*it)*1.0e-9, ",\n"[it+1 == exec_time_drift.end()]);
 		printf("Reference Version: Time = %.3f s; \n",average_execution_time_drift*1.0e-9);
     break;
     }
     case 2:
     {
     for(std::vector<double>::iterator it = exec_time_drift_exact.begin(); it != exec_time_drift_exact.end(); ++it)
-      printf("%.3f s%c",*it, ",\n"[it+1 == exec_time_drift_exact.end()]);
+      printf("%.3f s%c",(*it)*1.0e-9, ",\n"[it+1 == exec_time_drift_exact.end()]);
 		printf("Reference Version: Time = %.3f s; \n",average_execution_time_drift_exact*1.0e-9);
     break;
     }
     case 3:
     {
     for(std::vector<double>::iterator it = exec_time_cavity.begin(); it != exec_time_cavity.end(); ++it)
-      printf("%.3f s%c",*it, ",\n"[it+1 == exec_time_cavity.end()]);
+      printf("%.3f s%c",(*it)*1.0e-9, ",\n"[it+1 == exec_time_cavity.end()]);
 		printf("Reference Version: Time = %.3f s; \n",average_execution_time_cavity*1.0e-9);
     break;
     }
     case 4:
     {
     for(std::vector<double>::iterator it = exec_time_align.begin(); it != exec_time_align.end(); ++it)
-      printf("%.3f s%c",*it, ",\n"[it+1 == exec_time_align.end()]);
+      printf("%.3f s%c",(*it)*1.0e-9, ",\n"[it+1 == exec_time_align.end()]);
 		printf("Reference Version: Time = %.3f s; \n",average_execution_time_align*1.0e-9);
     break;
     }
