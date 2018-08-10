@@ -153,10 +153,7 @@ int main(int argc, char** argv)
           exit(1);
         }
   		int NUM_REPETITIONS = 10;//1010; // for benchmarking
-    	double num_of_turns_drift = 0.0; // for timing
-    	double num_of_turns_drift_exact = 0.0; // for timing
-    	double num_of_turns_cavity = 0.0; // for timing
-    	double num_of_turns_align = 0.0; // for timing
+    	double num_of_turns = 0.0; // for timing
     	double average_execution_time_drift = 0.0;
     	double average_execution_time_drift_exact = 0.0;
     	double average_execution_time_cavity = 0.0;
@@ -898,8 +895,8 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_drift.push_back(kernel_time_elapsed);
        // if( ll > 5 ) {
-          num_of_turns_drift += 1.0;
-          average_execution_time_drift += (kernel_time_elapsed - average_execution_time_drift)/num_of_turns_drift;
+          num_of_turns += 1.0;
+          average_execution_time_drift += (kernel_time_elapsed - average_execution_time_drift)/num_of_turns;
      // }
       break;
     }
@@ -945,8 +942,8 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_drift_exact.push_back(kernel_time_elapsed);
       //  if( ll > 5 ) {
-          num_of_turns_drift_exact += 1.0;
-          average_execution_time_drift_exact += (kernel_time_elapsed - average_execution_time_drift_exact)/num_of_turns_drift_exact;
+          num_of_turns += 1.0;
+          average_execution_time_drift_exact += (kernel_time_elapsed - average_execution_time_drift_exact)/num_of_turns;
     //  }
     break;
     }
@@ -991,8 +988,8 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_cavity.push_back(kernel_time_elapsed);
      //   if( ll > 5 ) {
-          num_of_turns_cavity += 1.0;
-          average_execution_time_cavity += (kernel_time_elapsed - average_execution_time_cavity)/num_of_turns_cavity;
+          num_of_turns += 1.0;
+          average_execution_time_cavity += (kernel_time_elapsed - average_execution_time_cavity)/num_of_turns;
      // }
     break;
     }
@@ -1037,8 +1034,8 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
         exec_time_align.push_back(kernel_time_elapsed);
         //if( ll > 5 ) {
-          num_of_turns_align += 1.0;
-          average_execution_time_align += (kernel_time_elapsed - average_execution_time_align)/num_of_turns_align;
+          num_of_turns += 1.0;
+          average_execution_time_align += (kernel_time_elapsed - average_execution_time_align)/num_of_turns;
       //}
     break;
     }
@@ -1054,7 +1051,7 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
     /* on the GPU, these pointers will have __global as a decorator */
 
-#if 1
+#if 0
     // On the CPU after copying the data back from the GPU
     std::cout << "\n On the Host, after applying the drift_track_particles mapping and copying from the GPU\n";
 
