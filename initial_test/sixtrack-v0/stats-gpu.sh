@@ -10,8 +10,8 @@ do
   echo "Particles = " $particles
   echo ""
 #  ./build/parallel_beam_elements $particles 0 # on the AMD GPU
-#  ./build/parallel_beam_elements-finalversion $particles 50 1 # on the nvidia GPU
-  ./build/parallel_beam_elements-finalversion $particles 50 4 # on the intel xeon cpu (techlab machine)
+  ./build/parallel_beam_elements_allinsequence $particles 50 1 1 # on the nvidia GPU
+#  ./build/parallel_beam_elements-finalversion $particles 50 4 # on the intel xeon cpu (techlab machine)
 #  ./build/parallel_beam_elements $particles 2 # on the cpu 
   echo "--------""--------""--------""--------"
 done
@@ -21,8 +21,8 @@ do
   echo "Particles = " $particles
   echo ""
 #  ./build/parallel_beam_elements $particles 0 # on the AMD GPU
-#  ./build/parallel_beam_elements-finalversion $particles 5 1 # on the nvidia GPU
-  ./build/parallel_beam_elements-finalversion $particles 5 4 # on the intel xeon cpu (techlab machine)
+  ./build/parallel_beam_elements_allinsequence $particles 5 1 1 # on the nvidia GPU
+#  ./build/parallel_beam_elements-finalversion $particles 5 4 # on the intel xeon cpu (techlab machine)
 #  ./build/parallel_beam_elements $particles 2 # on the cpu 
   echo "--------""--------""--------""--------"
 done
