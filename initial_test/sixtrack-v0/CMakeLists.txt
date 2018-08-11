@@ -114,3 +114,15 @@ set_property( TARGET parallel_beam_elements_oneatatime PROPERTY COMPILE_OPTIONS 
 
 
 #-------------------------------------------------------------------
+# parallel_beam_elements_allinsequence
+
+add_executable( parallel_beam_elements_allinsequence parallel_beam_elements_allinsequence.cpp )
+             
+target_link_libraries( parallel_beam_elements_allinsequence SixTracklib::sixtrack ${OpenCL_LIBRARY} )
+
+set_property( TARGET parallel_beam_elements_allinsequence PROPERTY CXX_STANDARD 11 )
+set_property( TARGET parallel_beam_elements_allinsequence PROPERTY CXX_STANDARD_REQUIRED ON )
+set_property( TARGET parallel_beam_elements_allinsequence PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic) 
+
+
+#-------------------------------------------------------------------
