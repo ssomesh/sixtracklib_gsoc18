@@ -148,13 +148,21 @@ NS(ParticlesSpecial)* NS(Blocks_add_particles_special)(
 
 int main(int argc, char** argv)
 {
-      if(argc < 2) {
-          std::cerr << "Usage: " << argv[0] << " < #particles >  [deviceIdx]" << std::endl;
+      if(argc < 4) {
+          std::cerr << "Usage: " << argv[0] << " < #particles > < #turns > < tracking_function_id > [deviceIdx]" << std::endl;
           exit(1);
         }
-  		int NUM_REPETITIONS = 15;//1010; // for benchmarking
+  		int NUM_REPETITIONS = 10;//1010; // for benchmarking
     	double num_of_turns = 0.0; // for timing
-    	double average_execution_time = 0.0;
+    	double average_execution_time_drift = 0.0;
+    	double average_execution_time_drift_exact = 0.0;
+    	double average_execution_time_cavity = 0.0;
+    	double average_execution_time_align = 0.0;
+
+      std::vector<double> exec_time_drift;
+      std::vector<double> exec_time_drift_exact;
+      std::vector<double> exec_time_cavity;
+      std::vector<double> exec_time_align;
 
 			for(int ll = 0; ll < NUM_REPETITIONS; ++ll) {
     /* We will use 9+ beam element blocks in this example and do not
@@ -352,9 +360,9 @@ int main(int argc, char** argv)
 
     if( !devices.empty() )
     {
-        if( argc >= 3 )
+        if( argc >= 5 )
         {
-            std::size_t const device_idx = std::atoi( argv[ 2 ] );
+            std::size_t const device_idx = std::atoi( argv[ 4 ] );
 
             if( device_idx < devices.size() )
             {
@@ -493,12 +501,24 @@ int main(int argc, char** argv)
 //   ( void )particles;
 
 
+//   const int QUARTER_NUM_OF_BEAM_ELEMENTS = (int)NUM_OF_BEAM_ELEMENTS/4;
   // Allocate device buffers and transfer input data to device.
 //  cl::Buffer B(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
 //      copy_buffer.size() * sizeof(uint8_t), copy_buffer.data()); // input vector
     cl::Buffer B(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements  )); // input vector
-queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements ), st_Blocks_get_const_data_begin( &beam_elements ) );
+ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements ), st_Blocks_get_const_data_begin( &beam_elements ) );
 
+#if 0
+    cl::Buffer B(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements )/4); // input vector for drift
+    cl::Buffer D(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements )/4); // input vector for drift_exact
+    cl::Buffer E(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements )/4); // input vector for cavity
+    cl::Buffer F(context, CL_MEM_READ_WRITE, st_Blocks_get_total_num_bytes( &beam_elements )/4); // input vector for align
+
+queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements )/4, st_Blocks_get_const_data_begin( &beam_elements ) );
+queue.enqueueWriteBuffer( D, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements )/4, st_Blocks_get_const_data_begin( &beam_elements)+(QUARTER_NUM_OF_BEAM_ELEMENTS ) );
+queue.enqueueWriteBuffer( E, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements )/4, st_Blocks_get_const_data_begin( &beam_elements)+(2*QUARTER_NUM_OF_BEAM_ELEMENTS ) );
+queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_elements )/4, st_Blocks_get_const_data_begin( &beam_elements)+(3*QUARTER_NUM_OF_BEAM_ELEMENTS)) ;
+#endif
 //    int numThreads = 1;
 //    int blockSize = 1;
 //    cl::Kernel unserialize(program, "unserialize");
@@ -825,8 +845,15 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 //       The signature of it will contain something like: (global uchar copy_buffer, global uchar copy_particle_buffer)
 //       In the body of the kernel, unserialize the work-item private NS(Block) instance of Particles, beam_elements and then use these instances.
 
-    SIXTRL_UINT64_T const NUM_TURNS = 100;
+    SIXTRL_UINT64_T const NUM_TURNS = atoi(argv[2]);//100;
+    SIXTRL_UINT64_T offset = 0;
+    cl::Event event;
 
+  switch (atoi(argv[3]))
+  {
+    case 1 :
+    {
+    cl::Event event;
     cl::Kernel track_drift_particle(program, "track_drift_particle");
     blockSize = track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
     numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
@@ -835,9 +862,9 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     track_drift_particle.setArg(1,C);
     track_drift_particle.setArg(2,NUM_PARTICLES);
     track_drift_particle.setArg(3,NUM_TURNS);
+    track_drift_particle.setArg(4,offset);
 
 
-    cl::Event event;
 
     queue.enqueueNDRangeKernel(
     track_drift_particle, cl::NullRange, cl::NDRange( numThreads ),
@@ -866,11 +893,153 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
         assert( ret == CL_SUCCESS ); // all ret's should be 1
 
         double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
+        exec_time_drift.push_back(kernel_time_elapsed);
         if( ll > 5 ) {
           num_of_turns += 1.0;
-          average_execution_time += (kernel_time_elapsed - average_execution_time)/num_of_turns;
+          average_execution_time_drift += (kernel_time_elapsed - average_execution_time_drift)/num_of_turns;
       }
+      break;
+    }
+    case 2:
+    {
 
+    offset = 250;
+    cl::Event event;
+    cl::Kernel track_drift_exact_particle(program, "track_drift_exact_particle");
+    blockSize = track_drift_exact_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
+    track_drift_exact_particle.setArg(0,B);
+    track_drift_exact_particle.setArg(1,C);
+    track_drift_exact_particle.setArg(2,NUM_PARTICLES);
+    track_drift_exact_particle.setArg(3,NUM_TURNS);
+    track_drift_exact_particle.setArg(4,offset);
+    queue.enqueueNDRangeKernel(
+    track_drift_exact_particle, cl::NullRange, cl::NDRange( numThreads ),
+    cl::NDRange(blockSize ), nullptr, &event);
+    queue.flush();
+    event.wait();
+    queue.finish();
+        cl_ulong when_kernel_queued    = 0;
+        cl_ulong when_kernel_submitted = 0;
+        cl_ulong when_kernel_started   = 0;
+        cl_ulong when_kernel_ended     = 0;
+
+        ret  = event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_QUEUED, &when_kernel_queued );
+
+        ret |= event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_SUBMIT, &when_kernel_submitted );
+
+        ret |= event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_START, &when_kernel_started );
+
+        ret |= event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_END, &when_kernel_ended );
+
+        assert( ret == CL_SUCCESS ); // all ret's should be 1
+
+        double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
+        exec_time_drift_exact.push_back(kernel_time_elapsed);
+        if( ll > 5 ) {
+          num_of_turns += 1.0;
+          average_execution_time_drift_exact += (kernel_time_elapsed - average_execution_time_drift_exact)/num_of_turns;
+      }
+    break;
+    }
+    case 3:
+    {
+    offset = 500;
+    cl::Event event;
+    cl::Kernel track_cavity_particle(program, "track_cavity_particle");
+    blockSize = track_cavity_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
+    track_cavity_particle.setArg(0,B);
+    track_cavity_particle.setArg(1,C);
+    track_cavity_particle.setArg(2,NUM_PARTICLES);
+    track_cavity_particle.setArg(3,NUM_TURNS);
+    track_cavity_particle.setArg(4,offset);
+    queue.enqueueNDRangeKernel(
+    track_cavity_particle, cl::NullRange, cl::NDRange( numThreads ),
+    cl::NDRange(blockSize ), nullptr, &event);
+    queue.flush();
+    event.wait();
+    queue.finish();
+        cl_ulong when_kernel_queued    = 0;
+        cl_ulong when_kernel_submitted = 0;
+        cl_ulong when_kernel_started   = 0;
+        cl_ulong when_kernel_ended     = 0;
+
+        ret  = event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_QUEUED, &when_kernel_queued );
+
+        ret |= event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_SUBMIT, &when_kernel_submitted );
+
+        ret |= event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_START, &when_kernel_started );
+
+        ret |= event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_END, &when_kernel_ended );
+
+        assert( ret == CL_SUCCESS ); // all ret's should be 1
+
+        double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
+        exec_time_cavity.push_back(kernel_time_elapsed);
+        if( ll > 5 ) {
+          num_of_turns += 1.0;
+          average_execution_time_cavity += (kernel_time_elapsed - average_execution_time_cavity)/num_of_turns;
+      }
+    break;
+    }
+    case 4:
+    {
+    cl::Event event;
+    offset = 750;
+    cl::Kernel track_align_particle(program, "track_align_particle");
+    blockSize = track_align_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
+    numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
+    std::cout << blockSize << " " << numThreads<< std::endl;
+    track_align_particle.setArg(0,B);
+    track_align_particle.setArg(1,C);
+    track_align_particle.setArg(2,NUM_PARTICLES);
+    track_align_particle.setArg(3,NUM_TURNS);
+    track_align_particle.setArg(4,offset);
+    queue.enqueueNDRangeKernel(
+    track_align_particle, cl::NullRange, cl::NDRange( numThreads ),
+    cl::NDRange(blockSize ), nullptr, &event);
+    queue.flush();
+    event.wait();
+    queue.finish();
+        cl_ulong when_kernel_queued    = 0;
+        cl_ulong when_kernel_submitted = 0;
+        cl_ulong when_kernel_started   = 0;
+        cl_ulong when_kernel_ended     = 0;
+
+        ret  = event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_QUEUED, &when_kernel_queued );
+
+        ret |= event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_SUBMIT, &when_kernel_submitted );
+
+        ret |= event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_START, &when_kernel_started );
+
+        ret |= event.getProfilingInfo< cl_ulong >(
+          CL_PROFILING_COMMAND_END, &when_kernel_ended );
+
+        assert( ret == CL_SUCCESS ); // all ret's should be 1
+
+        double const kernel_time_elapsed = when_kernel_ended - when_kernel_started;
+        exec_time_align.push_back(kernel_time_elapsed);
+        if( ll > 5 ) {
+          num_of_turns += 1.0;
+          average_execution_time_align += (kernel_time_elapsed - average_execution_time_align)/num_of_turns;
+      }
+    break;
+    }
+ }; // end of switch case
       queue.enqueueReadBuffer(C, CL_TRUE, 0, copy_particles_buffer_host.size() * sizeof(uint8_t), copy_particles_buffer_host.data());
       queue.flush();
 
@@ -920,7 +1089,38 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     st_Blocks_free( &particles_buffer );
     st_Blocks_free( &copy_particles_buffer );
   } // end of the NUM_REPETITIONS 'for' loop
-		printf("Reference Version: Time = %.3f s; \n",average_execution_time*1.0e-9);
+  switch(atoi(argv[3]))
+  {
+    case 1:
+    {
+      // printing the contents of the exec_time vector
+    for(std::vector<double>::iterator it = exec_time_drift.begin(); it != exec_time_drift.end(); ++it)
+      printf("%.3f s%c",(*it)*1.0e-9, ",\n"[it+1 == exec_time_drift.end()]);
+		printf("Reference Version: Time = %.3f s; \n",average_execution_time_drift*1.0e-9);
+    break;
+    }
+    case 2:
+    {
+    for(std::vector<double>::iterator it = exec_time_drift_exact.begin(); it != exec_time_drift_exact.end(); ++it)
+      printf("%.3f s%c",(*it)*1.0e-9, ",\n"[it+1 == exec_time_drift_exact.end()]);
+		printf("Reference Version: Time = %.3f s; \n",average_execution_time_drift_exact*1.0e-9);
+    break;
+    }
+    case 3:
+    {
+    for(std::vector<double>::iterator it = exec_time_cavity.begin(); it != exec_time_cavity.end(); ++it)
+      printf("%.3f s%c",(*it)*1.0e-9, ",\n"[it+1 == exec_time_cavity.end()]);
+		printf("Reference Version: Time = %.3f s; \n",average_execution_time_cavity*1.0e-9);
+    break;
+    }
+    case 4:
+    {
+    for(std::vector<double>::iterator it = exec_time_align.begin(); it != exec_time_align.end(); ++it)
+      printf("%.3f s%c",(*it)*1.0e-9, ",\n"[it+1 == exec_time_align.end()]);
+		printf("Reference Version: Time = %.3f s; \n",average_execution_time_align*1.0e-9);
+    break;
+    }
+  };
     return 0;
 
   }
