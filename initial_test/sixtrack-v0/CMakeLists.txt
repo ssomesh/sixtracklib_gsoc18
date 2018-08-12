@@ -126,3 +126,16 @@ set_property( TARGET parallel_beam_elements_allinsequence PROPERTY COMPILE_OPTIO
 
 
 #-------------------------------------------------------------------
+
+# parallel_beam_elements_switchcaseoncpu
+
+add_executable( parallel_beam_elements_switchcaseoncpu parallel_beam_elements_switchcaseoncpu.cpp )
+             
+target_link_libraries( parallel_beam_elements_switchcaseoncpu SixTracklib::sixtrack ${OpenCL_LIBRARY} )
+
+set_property( TARGET parallel_beam_elements_switchcaseoncpu PROPERTY CXX_STANDARD 11 )
+set_property( TARGET parallel_beam_elements_switchcaseoncpu PROPERTY CXX_STANDARD_REQUIRED ON )
+set_property( TARGET parallel_beam_elements_switchcaseoncpu PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic) 
+
+
+#-------------------------------------------------------------------
