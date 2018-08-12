@@ -21,7 +21,7 @@ Multipole for example has additonal data-members and takes more space.
 3. have the 'for-loop' for the number of turns inside the kernel.
 */
 
-// The kernel file is "kernels_beam_elements_switchcaseoncpu.cl"
+// The kernel file is "kernels_beam_elements_switchcaseoncpuremoved.cl"
 
 #include <cassert>
 #include <cstdint>
@@ -423,7 +423,7 @@ int main(int argc, char** argv)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // getting the kernel file
    std::string PATH_TO_KERNEL_FILE( st_PATH_TO_BASE_DIR );
-       PATH_TO_KERNEL_FILE += "../kernels_beam_elements_switchcaseoncpu.cl";
+       PATH_TO_KERNEL_FILE += "../kernels_beam_elements_switchcaseoncpuremoved.cl";
 
        std::string kernel_source( "" );
        std::ifstream kernel_file( PATH_TO_KERNEL_FILE.c_str(),
@@ -897,32 +897,29 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     /* Generate an iterator range over all the stored Blocks: */
 
 
-    st_BlockInfo const* belem_it  =
+    st_BlockInfo const* belem_it_begin =
       st_Blocks_get_const_block_infos_begin( &beam_elements );
 
-    st_BlockInfo const* belem_end =
+    st_BlockInfo const* belem_end_finish =
       st_Blocks_get_const_block_infos_end( &beam_elements );
 
     cl::Event event;
+
+    st_BlockInfo const* belem_it = belem_it_begin; 
+    st_BlockInfo const* belem_end = belem_it_begin + 250;
     for( ; belem_it != belem_end ; ++belem_it, ++beam_index )
     {
 //      std::cout << std::setw( 6 ) << beam_index << " | type: ";
 
-      auto const type_id = st_BlockInfo_get_type_id( belem_it );
+      // the beam_elements of each type are chunked. So removing the switch case.
 
-      switch( type_id )
-      {
-        case st_BLOCK_TYPE_DRIFT:
-          {
-//            cl::Kernel track_drift_particle(program, "track_drift_particle");
-//            blockSize = track_drift_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
-//            numThreads = ((NUM_PARTICLES+blockSize-1)/blockSize) * blockSize; // rounding off NUM_PARTICLES to the next nearest multiple of blockSize. This is to ensure that there are integer number of work-groups launched
-//            //std::cout << blockSize << " " << numThreads<< std::endl;
-//            track_drift_particle.setArg(0,B);
-//            track_drift_particle.setArg(1,C);
+//      auto const type_id = st_BlockInfo_get_type_id( belem_it );
+
+//      switch( type_id )
+//      {
+//        case st_BLOCK_TYPE_DRIFT:
+//          {
             track_drift_particle.setArg(2,beam_index);
-//            track_drift_particle.setArg(3,NUM_PARTICLES);
-//            track_drift_particle.setArg(4,NUM_TURNS);
 
 
 
@@ -932,11 +929,18 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
             queue.flush();
 //            event.wait();
 //            queue.finish();
-            break;
-          }
+  //          break;
+//          }
 
-        case st_BLOCK_TYPE_DRIFT_EXACT:
-          {
+     }
+
+    belem_it = belem_it_begin + 250; 
+    belem_end = belem_it_begin + 500;
+    for( ; belem_it != belem_end ; ++belem_it, ++beam_index )
+    {
+
+       // case st_BLOCK_TYPE_DRIFT_EXACT:
+       //   {
 
 //            cl::Kernel track_drift_exact_particle(program, "track_drift_exact_particle");
 //            blockSize = track_drift_exact_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
@@ -955,10 +959,16 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 //            event.wait();
 //            queue.finish();
 
-            break;
-          }
-        case st_BLOCK_TYPE_CAVITY:
-          {
+         //   break;
+        //  }
+        } 
+
+    belem_it = belem_it_begin + 500; 
+    belem_end = belem_it_begin + 750;
+    for( ; belem_it != belem_end ; ++belem_it, ++beam_index )
+    {
+      //  case st_BLOCK_TYPE_CAVITY:
+       //   {
             // enquing the cavity kernel
 //            cl::Kernel track_cavity_particle(program, "track_cavity_particle");
 //            blockSize = track_cavity_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
@@ -977,11 +987,16 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 //            event.wait();
 //            queue.finish();
 
-            break;
-          }
+       //     break;
+       //   }
+     }
 
-        case st_BLOCK_TYPE_ALIGN:
-          {
+    belem_it = belem_it_begin + 750; 
+    belem_end = belem_end_finish;
+    for( ; belem_it != belem_end ; ++belem_it, ++beam_index )
+    {
+      //  case st_BLOCK_TYPE_ALIGN:
+      //    {
             // enquing the align kernel
 //            cl::Kernel track_align_particle(program, "track_align_particle");
 //            blockSize = track_align_particle.getWorkGroupInfo< CL_KERNEL_WORK_GROUP_SIZE >( *ptr_selected_device);// determine the work-group size
@@ -999,16 +1014,15 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
             queue.flush();
 //            event.wait();
 //            queue.finish();
-            break;
-          }
-
-        default:
-          {
-            std::cout << "unknown     | --> skipping\r\n";
-          }
-      };
-    }
-    } // end of for loop for NUM_TURNS
+          //  break;
+         // }
+      }
+     //   default:
+     //     {
+     //       std::cout << "unknown     | --> skipping\r\n";
+     //     }
+ //     };
+    }// end of for loop for NUM_TURNS
 	clkend = rtclock();
   t = clkend-clkbegin;
   exec_time.push_back(t);
