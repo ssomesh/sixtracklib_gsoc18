@@ -148,8 +148,8 @@ NS(ParticlesSpecial)* NS(Blocks_add_particles_special)(
 
 int main(int argc, char** argv)
 {
-      if(argc < 4) {
-          std::cerr << "Usage: " << argv[0] << " < #particles > < #turns > < tracking_function_id > [deviceIdx]" << std::endl;
+      if(argc < 3) {
+          std::cerr << "Usage: " << argv[0] << " < #particles > < #turns > [deviceIdx]" << std::endl;
           exit(1);
         }
   		int NUM_REPETITIONS = 10;//1010; // for benchmarking
@@ -166,6 +166,8 @@ int main(int argc, char** argv)
       std::vector<double> exec_time_drift_exact;
       std::vector<double> exec_time_cavity;
       std::vector<double> exec_time_align;
+
+      int choice  = 1;
 
 			for(int ll = 0; ll < NUM_REPETITIONS; ++ll) {
     /* We will use 9+ beam element blocks in this example and do not
@@ -363,9 +365,9 @@ int main(int argc, char** argv)
 
     if( !devices.empty() )
     {
-        if( argc >= 5 )
+        if( argc >= 4 )
         {
-            std::size_t const device_idx = std::atoi( argv[ 4 ] );
+            std::size_t const device_idx = std::atoi( argv[ 3 ] );
 
             if( device_idx < devices.size() )
             {
@@ -851,8 +853,8 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     SIXTRL_UINT64_T const NUM_TURNS = atoi(argv[2]);//100;
     SIXTRL_UINT64_T offset = 0;
     cl::Event event;
-
-  switch (atoi(argv[3]))
+  
+  switch (choice)
   {
     case 1 :
     {
@@ -1091,7 +1093,7 @@ queue.enqueueWriteBuffer( F, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
     st_Blocks_free( &particles_buffer );
     st_Blocks_free( &copy_particles_buffer );
   } // end of the NUM_REPETITIONS 'for' loop
-  switch(atoi(argv[3]))
+  switch(choice)
   {
     case 1:
     {
