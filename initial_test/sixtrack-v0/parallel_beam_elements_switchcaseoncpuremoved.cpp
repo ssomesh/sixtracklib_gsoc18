@@ -1187,9 +1187,9 @@ queue.enqueueWriteBuffer( B, CL_TRUE, 0, st_Blocks_get_total_num_bytes( &beam_el
 
     // printing the exec_time vector
     for(std::vector<double>::iterator it = exec_time.begin(); it != exec_time.end(); ++it)
-      printf("%.3f s%c",(*it), ",\n"[it+1 == exec_time.end()]);
+      printf("%.3lf s%c",(*it), ",\n"[it+1 == exec_time.end()]);
 
-		printf("Reference Version: Time = %.3f s; \n",average_execution_time);
+		printf("Reference Version: Time = %.3lf s; \n",average_execution_time);
     return 0;
 
   }
