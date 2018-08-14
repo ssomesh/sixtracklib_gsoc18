@@ -58,6 +58,7 @@ external/
     └── libsixtrackd.so
 ```
 ## Building the executables
+
 Inside ${SIXTRACK_DIR}, enter the build directory and run cmake and make:
 ```
 cd ${SIXTRACK_DIR}/build
@@ -66,13 +67,29 @@ make
 ```
 ## Executing the executables
 
-The executables of interest need to be executed as follows to replicate the performance numbers reported for the various scenarios in the folder [*benchmarking_results*](benchmarking_results).
-
 **Note**: 
 * The name of the executable for a source code has the same name as that of the **.cpp** file.
 * Example: For the source file *parallel_beam_elements_allinsequence.cpp*, the executable created in the *build* folder upon a successful build is named *parallel_beam_elements_allinsequence*  
 
- 
+
+In order to replicate the performance numbers reported for the various scenarios in the folder [*benchmarking_results*](benchmarking_results), the executables of the source codes of interest need to be executed as follows:
+
+```
+./parallel_beam_elements-finalversion <#particles> <#turns>  [deviceIdx]
+```
+    
+```
+./parallel_beam_elements_allinsequence <#particles> <#turns> [deviceIdx]
+```
+```
+./parallel_beam_elements_oneatatime <#particles> <#turns> <tracking_function_id> [deviceIdx]
+```
+```
+./parallel_beam_elements_switchcaseoncpu <#particles> <#turns>  [deviceIdx]
+```
+```
+./parallel_beam_elements_switchcaseoncpuremoved <#particles> <#turns>  [deviceIdx]
+```
 
 
 
