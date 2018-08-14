@@ -1,3 +1,74 @@
+# Installation
+
+## Prerequisities
+* cmake 3.8 or higher
+* gcc and g++ 5.4.x or higher (C++11 support)
+* The dependencies for building the submodules of sixtracklib
+
+## Preparation: Installing sixtracklib into the external subfolder of *sixtrack-v0*
+**Assumptions**:
+* this document is located under ${SIXTRACK_DIR} 
+* Upstream sixtracklib will be cloned into ${HOME}/git/sixtracklib
+
+```
+cd ${HOME}/git
+git clone git@github.com:martinschwinzerl/sixtracklib.git 
+cd sixtracklib.git
+```
+create a build directory and configure the build process by providing the path to the *external* subdirectory in *sixtrack-v0*:
+```
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${SIXTRACK_DIR}/external -DGTEST_ROOT=/opt/googletest
+```
+The output should contain no errors. Then build and install
+```
+make
+make install
+cd ${SIXTRACK_DIR}
+```
+Verify that the contents of external look something like this:
+```
+external/
+├── include
+│   └── sixtracklib
+│       ├── common
+│       │   ├── alignment.h
+│       │   ├── beam_elements.h
+│       │   ├── blocks.h
+│       │   ├── impl
+│       │   │   ├── alignment_impl.h
+│       │   │   ├── beam_elements_api.h
+│       │   │   ├── beam_elements_type.h
+│       │   │   ├── particles_api.h
+│       │   │   └── particles_type.h
+│       │   ├── mem_pool.h
+│       │   └── particles.h
+│       └── _impl
+│           ├── definitions.h
+│           ├── modules.h
+│           ├── namespace_begin.h
+│           ├── namespace_end.h
+│           └── path.h
+└── lib
+    ├── cmake
+    │   ├── SixTracklibConfig.cmake
+    │   ├── SixTracklibTargets.cmake
+    │   └── SixTracklibTargets-debug.cmake
+    └── libsixtrackd.so
+```
+## Building the executables
+Inside ${STUDY8_DIR}, enter the build directory and run cmake and make:
+```
+cd ${SIXTRACK_DIR}/build
+cmake ..
+make
+```
+
+
+
+
+<!--
 # Study 8 - Use external sixtracklib installation for a minimal program
 This is one quick & dirty way to use the upstream sixtracklib repository for a simple demo program or for checking/comparison, purposes. To this end, a recent upstream version of sixtracklib is installed into the "external" folder in this study and CMake is used to configure the demo program - use_blocks.cpp - to properly use it.
 
@@ -113,5 +184,5 @@ Print the copied beam_elements:
 
 Finished successfully!
 ```
-
+-->
 
