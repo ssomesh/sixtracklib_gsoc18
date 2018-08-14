@@ -41,7 +41,7 @@ Note: In the above bulleted list, **\[\*\].cpp** contains the host code; **\[\*\
 The source files can be found in **SixTrackLib** at the following link: 
 https://github.com/martinschwinzerl/sixtracklib/tree/master/tests/benchmark/sixtracklib/opencl
 
-## Generating Results
+## Generating the Results
 
 The source files mentioned above generate benchmarking results for the various scenarios outlined in [*GSoc2018Report.pdf*](GSoc2018Report.pdf). 
 
