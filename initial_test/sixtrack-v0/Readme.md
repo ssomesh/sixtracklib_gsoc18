@@ -7,7 +7,7 @@
 
 ## Preparation: Installing sixtracklib into the external subfolder of *sixtrack-v0*
 **Assumptions**:
-* this document is located under ${SIXTRACK_DIR} 
+* this document is located under ${WORKDIR} 
 * Upstream sixtracklib will be cloned into ${HOME}/git/sixtracklib
 
 ```
@@ -19,13 +19,13 @@ create a *build* directory and configure the build process by providing the path
 ```
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${SIXTRACK_DIR}/external -DGTEST_ROOT=/opt/googletest
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${WORKDIR}/external 
 ```
 The output should contain no errors. Then build and install
 ```
 make
 make install
-cd ${SIXTRACK_DIR}
+cd ${WORKDIR}
 ```
 Verify that the contents of external look something like this:
 ```
@@ -59,9 +59,9 @@ external/
 ```
 ## Building the executables
 
-Inside ${SIXTRACK_DIR}, enter the build directory and run cmake and make:
+Inside ${WORKDIR}, enter the build directory and run cmake and make:
 ```
-cd ${SIXTRACK_DIR}/build
+cd ${WORKDIR}/build
 cmake ..
 make
 ```
