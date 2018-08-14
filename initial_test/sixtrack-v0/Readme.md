@@ -58,13 +58,21 @@ external/
     └── libsixtrackd.so
 ```
 ## Building the executables
-Inside ${STUDY8_DIR}, enter the build directory and run cmake and make:
+Inside ${SIXTRACK_DIR}, enter the build directory and run cmake and make:
 ```
 cd ${SIXTRACK_DIR}/build
 cmake ..
 make
 ```
+## Executing the executables
 
+The executables of interest need to be executed as follows to replicate the performance numbers reported for the various scenarios in the folder [*benchmarking_results*](benchmarking_results).
+
+**Note**: 
+* The name of the executable for a source code has the same name as that of the **.cpp** file.
+* Example: For the source file *parallel_beam_elements_allinsequence.cpp*, the executable created in the *build* folder upon a successful build is named *parallel_beam_elements_allinsequence*  
+
+ 
 
 
 
