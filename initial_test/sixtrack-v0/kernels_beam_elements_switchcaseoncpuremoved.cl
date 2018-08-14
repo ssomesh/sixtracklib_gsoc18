@@ -66,7 +66,6 @@ kernel void track_drift_particle(
 
   // for each particle we apply the beam_elements, as applicable (decided by the switch case)
 
-//  for (size_t nt=0; nt < NUM_TURNS; ++nt) {
     SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
       st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
     SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
@@ -96,7 +95,6 @@ kernel void track_drift_particle(
             particles->x[ ii ] = x;
             particles->y[ ii ] = y;
             particles->sigma[ ii ] = sigma;
-//  }
 
 };
 
@@ -135,7 +133,6 @@ kernel void track_drift_exact_particle(
 
   // for each particle we apply the beam_elements, as applicable (decided by the switch case)
 
-  // for (size_t nt=0; nt < NUM_TURNS; ++nt) {
     SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
       st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
     SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
@@ -176,7 +173,6 @@ kernel void track_drift_exact_particle(
             particles->x[ ii ] = x;
             particles->y[ ii ] = y;
             particles->sigma[ ii ] = sigma;
- // }
 
 };
 
@@ -215,7 +211,6 @@ kernel void track_cavity_particle(
 
   // for each particle we apply the beam_elements, as applicable (decided by the switch case)
 
-//  for (size_t nt=0; nt < NUM_TURNS; ++nt) {
     SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_it  = 
       st_Blocks_get_const_block_infos_begin( &copied_beam_elements );
     SIXTRL_GLOBAL_DEC st_BlockInfo const* belem_end =
@@ -261,7 +256,6 @@ kernel void track_cavity_particle(
             particles->rpp[ii] = ONE  / opd ;
             particles->rvv[ii] = beta0 / beta;
 
- // }
 
 };
 
