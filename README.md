@@ -41,9 +41,20 @@ Note: In the above bulleted list, **\[\*\].cpp** contains the host code; **\[\*\
 
 The source files mentioned above generate benchmarking results for the various scenarios outlined in [*GSoc2018Report.pdf*](GSoc2018Report.pdf). 
 
-The correpondence between the source file and the scenario is mentioned below.
+The correpondence between a source file and a scenario is mentioned below.
 
 - [parallel_beam_elements-finalversion.cpp](initial_test/sixtrack-v0/parallel_beam_elements-finalversion.cpp) : *Scenario 1(a)*
 - [parallel_beam_elements_allinsequence.cpp](initial_test/sixtrack-v0/parallel_beam_elements_allinsequence.cpp) : *Scenario 1(b)*
+- [parallel_beam_elements_oneatatime.cpp](initial_test/sixtrack-v0/parallel_beam_elements_oneatatime.cpp) : *Scenario 1(c)*
 - [parallel_beam_elements_switchcaseoncpu.cpp](initial_test/sixtrack-v0/parallel_beam_elements_switchcaseoncpu.cpp) : *Scenario 2*
 - [parallel_beam_elements_switchcaseoncpuremoved.cpp](initial_test/sixtrack-v0/parallel_beam_elements_switchcaseoncpuremoved.cpp) : *Scenario 3*
+
+## Benchmarking Results
+
+The benchmarking results obtained on running the various implementations (mentioned above) on various platforms (see *GSoc2018Report.pdf*](GSoc2018Report.pdf)) are present in the folder [*initial_test/sixtrack-v0/benchmarking_results*](initial_test/sixtrack-v0/benchmarking_results).
+
+- benchmarking_allinonekernel\[\*\] contains results for *Scenario 1(a)*
+- benchmarking_allinsequence\[\*\] contains results for *Scenario 1(b)*
+- benchmarking_oneatatime\[\*\] contains results for *Scenario 1(c)*
+- benchmarking_switchcaseoncpu\[\*\] contains results for *Scenario 2*
+- benchmarking_switchcaseoncpuremoved\[\*\] contains results for *Scenario 3*
