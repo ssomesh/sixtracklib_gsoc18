@@ -23,7 +23,7 @@ A detailed documentation on the project can be found in [*GSoc2018Report.pdf*](G
 
 ### Installation
 
-Please follow the instructions in the Readme.md in the folder [*initial_test/sixtrack-v0*](initial_test/sixtrack-v0).
+Please follow the instructions in the [Readme.md](initial_test/sixtrack-v0/Readme.md) in the folder [*initial_test/sixtrack-v0*](initial_test/sixtrack-v0).
 
 ## Source files of interest
 
@@ -34,3 +34,16 @@ The different minimal parallel implementations of SixTrackLib written during GSo
 - [parallel_beam_elements_oneatatime.cpp](initial_test/sixtrack-v0/parallel_beam_elements_oneatatime.cpp) and [kernels_beam_elements_oneatatime.cl](initial_test/sixtrack-v0/kernels_beam_elements_oneatatime.cl)
 - [parallel_beam_elements_switchcaseoncpu.cpp](initial_test/sixtrack-v0/parallel_beam_elements_switchcaseoncpu.cpp) and [kernels_beam_elements_switchcaseoncpu.cl](initial_test/sixtrack-v0/kernels_beam_elements_switchcaseoncpu.cl)
 - [parallel_beam_elements_switchcaseoncpuremoved.cpp](initial_test/sixtrack-v0/parallel_beam_elements_switchcaseoncpuremoved.cpp) and [kernels_beam_elements_switchcaseoncpuremoved.cl](initial_test/sixtrack-v0/kernels_beam_elements_switchcaseoncpuremoved.cl)
+
+Note: In the above bulleted list, **\[\*\].cpp** contains the host code; **\[\*\].cl** contains the OpenCL device code
+
+## Generating Results
+
+The source files mentioned above generate benchmarking results for the various scenarios outlined in [*GSoc2018Report.pdf*](GSoc2018Report.pdf). 
+
+The correpondence between the source file and the scenario is mentioned below.
+
+- [parallel_beam_elements-finalversion.cpp](initial_test/sixtrack-v0/parallel_beam_elements-finalversion.cpp) : *Scenario 1(a)*
+- [parallel_beam_elements_allinsequence.cpp](initial_test/sixtrack-v0/parallel_beam_elements_allinsequence.cpp) : *Scenario 1(b)*
+- [parallel_beam_elements_switchcaseoncpu.cpp](initial_test/sixtrack-v0/parallel_beam_elements_switchcaseoncpu.cpp) : *Scenario 2*
+- [parallel_beam_elements_switchcaseoncpuremoved.cpp](initial_test/sixtrack-v0/parallel_beam_elements_switchcaseoncpuremoved.cpp) : *Scenario 3*
