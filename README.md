@@ -37,7 +37,7 @@ The different minimal parallel implementations of SixTrackLib written during GSo
 
 Note: In the above bulleted list, **\[\*\].cpp** contains the host code; **\[\*\].cl** contains the OpenCL device code
 
-* The source files listed above have also been merged with the master branch of the **SixTrackLib** project. 
+* The source files listed above have also been merged into the *master* branch of the **SixTrackLib** project. 
 The source files can be found in **SixTrackLib** at the following link: 
 https://github.com/martinschwinzerl/sixtracklib/tree/master/tests/benchmark/sixtracklib/opencl
 
