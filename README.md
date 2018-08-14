@@ -7,7 +7,7 @@ As part of Google Summer of Code 2018, I developed a standalone minimal parallel
 A detailed documentation on the project can be found in [*GSoc2018Report.pdf*](GSoc2018Report.pdf).
 
 ## Prerequisities
-* cmake 3.3 or higher
+* cmake 3.8 or higher
 * gcc and g++ 5.4.x or higher (C++11 support)
 * The dependencies for building the submodules of sixtracklib
 
