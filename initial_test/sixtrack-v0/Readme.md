@@ -15,7 +15,7 @@ cd ${HOME}/git
 git clone git@github.com:martinschwinzerl/sixtracklib.git 
 cd sixtracklib.git
 ```
-create a build directory and configure the build process by providing the path to the *external* subdirectory in *sixtrack-v0*:
+create a *build* directory and configure the build process by providing the path to the *external* subdirectory in *sixtrack-v0*:
 ```
 mkdir build
 cd build
