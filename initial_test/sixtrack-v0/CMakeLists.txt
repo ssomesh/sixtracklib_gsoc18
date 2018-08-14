@@ -54,7 +54,7 @@ target_link_libraries( parallel_beam_elements_opt1 SixTracklib::sixtrack ${OpenC
 
 set_property( TARGET parallel_beam_elements_opt1 PROPERTY CXX_STANDARD 11 )
 set_property( TARGET parallel_beam_elements_opt1 PROPERTY CXX_STANDARD_REQUIRED ON )
-set_property( TARGET parallel_beam_elements_opt1 PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic -g) 
+set_property( TARGET parallel_beam_elements_opt1 PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic ) 
 
 #-------------------------------------------------------------------
 # parallel_beam_elements_opt2
@@ -65,7 +65,7 @@ target_link_libraries( parallel_beam_elements_opt2 SixTracklib::sixtrack ${OpenC
 
 set_property( TARGET parallel_beam_elements_opt2 PROPERTY CXX_STANDARD 11 )
 set_property( TARGET parallel_beam_elements_opt2 PROPERTY CXX_STANDARD_REQUIRED ON )
-set_property( TARGET parallel_beam_elements_opt2 PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic -g) 
+set_property( TARGET parallel_beam_elements_opt2 PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic ) 
 
 #-------------------------------------------------------------------
 
@@ -77,7 +77,7 @@ target_link_libraries( parallel_beam_elements_opt3 SixTracklib::sixtrack ${OpenC
 
 set_property( TARGET parallel_beam_elements_opt3 PROPERTY CXX_STANDARD 11 )
 set_property( TARGET parallel_beam_elements_opt3 PROPERTY CXX_STANDARD_REQUIRED ON )
-set_property( TARGET parallel_beam_elements_opt3 PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic -g) 
+set_property( TARGET parallel_beam_elements_opt3 PROPERTY COMPILE_OPTIONS -Wall -Werror -pedantic ) 
 
 #-------------------------------------------------------------------
 #sequential drift_cpu
