@@ -55,7 +55,7 @@ The correpondence between a source file and a scenario is mentioned below.
 
 ## Benchmarking Results
 
-The benchmarking results obtained on running the various implementations (mentioned above) on various platforms (see *GSoc2018Report.pdf*](GSoc2018Report.pdf)) are present in the folder [*initial_test/sixtrack-v0/benchmarking_results*](initial_test/sixtrack-v0/benchmarking_results).
+The benchmarking results obtained on running the various implementations (mentioned above) on various platforms (see [*GSoc2018Report.pdf*](GSoc2018Report.pdf)) are present in the folder [*initial_test/sixtrack-v0/benchmarking_results*](initial_test/sixtrack-v0/benchmarking_results).
 
 - benchmarking_allinonekernel\[\*\] contains results for *Scenario 1(a)*
 - benchmarking_allinsequence\[\*\] contains results for *Scenario 1(b)*
